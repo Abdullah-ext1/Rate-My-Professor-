@@ -10,6 +10,23 @@ const userSchema = new mongoose.Schema({
     required: true,
     unique: true
   },
+  avatar: {
+    type: String,
+    default: 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'
+  },
+  googleId: {
+    type: String,
+    unique: true,
+    sparse: true
+  }, 
+  department: {
+    type: String,
+    required: true
+  },  
+  year: {
+    type: Number,
+    required: true
+  }, 
   password: {
     type: String,
     required: true

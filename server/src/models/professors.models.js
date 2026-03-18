@@ -5,15 +5,7 @@ const professorSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  email: {
-    type: String,
-    required: true,
-    unique: true
-  },
-  department: {
-    type: String,
-    required: true
-  },
+  
 }, { timestamps: true });
 
 export const Professor = mongoose.model('Professor', professorSchema);  
