@@ -1,6 +1,10 @@
 import mongoose, {Schema} from 'mongoose';
 
-const ratingSchema = new Schema({
+const attendanceSchema = new Schema({
+  subject: {
+    type: String,
+    required: true
+  },
   professor: {
     type: Schema.Types.ObjectId,
     ref: 'Professor',
@@ -11,19 +15,15 @@ const ratingSchema = new Schema({
     ref: 'User',
     required: true
   },
-  rating: {
+  classAttended: {
     type: Number,
     required: true,
-    min: 1,
-    max: 5
+    min: 0
   },
-  comment: {
-    type: String,
-    default: ''
+  totalClasses: {
+    type: Number,
+    required: true,
+    min: 1
   }
 }, { timestamps: true });
 
-
-ratingSchema.index({ professor: 1, student: 1 }, { unique: true });
-
-export const Rating = mongoose.model('Rating', ratingSchema);
