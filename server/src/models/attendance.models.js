@@ -25,5 +25,17 @@ const attendanceSchema = new Schema({
     required: true,
     min: 1
   }
-}, { timestamps: true });
+}, { timestamps: true ,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
+});
 
+attendanceSchema.virtual("bunkmeter").get(function() {
+  const bunksLeft = Math.floor(this.classAttended - (this.totalClasses * 0.75))
+  return bunksLeft
+})
+
+export const Attendance = mongoose.model('Attendance', attendanceSchema);
+
+const calculateBunk = new Attendance({totalClasses: 100, classAttended: 82});
+console.log(calculateBunk.bunkmeter);
