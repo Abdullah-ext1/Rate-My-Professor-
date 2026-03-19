@@ -7,6 +7,7 @@ import passport from 'passport';
 import configurePassport from './middlewares/passport.js';
 import authroutes from './routes/auth.routes.js';
 import postRoutes from './routes/post.route.js';
+import professorRoutes from './routes/professor.routes.js';
 
 const app = express();
 
@@ -20,5 +21,7 @@ app.use(passport.initialize());
 app.use("/api/auth", authroutes)
 
 app.use("/api/posts", postRoutes)
+
+app.use("/api/professor" , professorRoutes)
 
 export default app;
