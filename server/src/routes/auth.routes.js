@@ -25,5 +25,4 @@ router.get("/google/callback", passport.authenticate("google", {session: false})
 
 router.put("/onboarding", verifyJwt, onboardingAuth)
 
-
 export default router;
