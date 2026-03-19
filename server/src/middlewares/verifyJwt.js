@@ -1,4 +1,4 @@
-import { User } from '../models/User.js';
+import { User } from "../models/users.models.js";
 import jwt from 'jsonwebtoken';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { ApiError } from "../utils/ApiError.js"

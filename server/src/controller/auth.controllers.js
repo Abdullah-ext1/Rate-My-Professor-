@@ -47,5 +47,4 @@ const onboardingAuth = asyncHandler( async(req, res) => {
 
 export {
   onboardingAuth,
-
 }
