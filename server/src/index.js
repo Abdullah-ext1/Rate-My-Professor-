@@ -1,21 +1,12 @@
-import { app } from "./app.js";
-import cookieParser from "cookie-parser";
+import app from './app.js';
+import {connectDb} from "./db/db.connection.js"
 
-app.use(express.json({ limit: '16kb' }));
-app.use(express.urlencoded({ extended: true }, { limit: '16kb' }));
-
-app.use(cookieParser())
-
-app.use(session({
-  secret: process.env.SESSION_SECRET || "keyboard cat",
-  resave: false,
-  saveUninitialized: true,
-}));
-
-app.use(passport.initialize());
-app.use(passport.session());
-
-
-import { Router } from "express";
-const router = Router();
-
+connectDb()
+.then( () => {
+  app.listen(process.env.PORT, () => {
+    console.log(`Server is running on port ${process.env.PORT}`);
+  });
+})
+.catch( (error) => {
+  console.error('Failed to connect to the database:', error);
+})

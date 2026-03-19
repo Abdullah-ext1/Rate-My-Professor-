@@ -1,9 +1,22 @@
-import express from "express";
+import dotenv from 'dotenv';
+dotenv.config();
 
+import express from 'express';
+import cookieParser from 'cookie-parser';
+import passport from 'passport';
+import configurePassport from './middlewares/passport.js';
+import authroutes from './routes/auth.routes.js';
 
 const app = express();
 
-app.use(express.json({limit : "16kb"}))
-app.use(express.urlencoded({ extended : true , limit : '20kb'}))
+configurePassport();
 
-export {app}
+app.use(express.json());
+app.use(cookieParser());
+app.use(passport.initialize());
+
+
+app.use("/api/auth", authroutes)
+
+
+export default app;

@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import mongoose, {Schema} from 'mongoose';
 
 const userSchema = new mongoose.Schema({
   name: {
@@ -21,21 +21,19 @@ const userSchema = new mongoose.Schema({
   }, 
   department: {
     type: String,
-    required: true
   },  
   year: {
     type: Number,
-    required: true
-  }, 
-  password: {
-    type: String,
-    required: true
   },
   role: {
     type: String,
     enum: ['user', 'admin', 'moderator',],
     default: 'user'
-  }
+  },
+  college: {
+    type: Schema.Types.ObjectId,
+    ref: 'College'
+  },
 }, { timestamps: true });
 
 export const User = mongoose.model('User', userSchema);
