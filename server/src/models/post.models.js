@@ -11,7 +11,7 @@ const postSchema = new Schema({
   },
   tags: {
     type: String,
-    enum: ["general", "resources", "discussions", "coding", "professor", "rant", 'other'],
+    enum: ["confession", "rant", "question", "attendance",'other'],
   },
   comments:{
     type: [{
