@@ -16,8 +16,8 @@ router.get("/google/callback", passport.authenticate("google", {session: false})
       { expiresIn: "7d"},
     )
     res.cookie("accessToken", token,{httpOnly: true})
-    // res.redirect("http://localhost:5173")
-    res.json({sucess: true, user: req.user})
+    res.redirect("http://localhost:5173")
+    // res.json({sucess: true, user: req.user})
   },
 )
 
