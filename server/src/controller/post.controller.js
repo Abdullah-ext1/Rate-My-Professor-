@@ -3,6 +3,7 @@ import { Post } from "../models/post.models.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { Comment } from "../models/comment.models.js";
 
 const createPost = asyncHandler( async(req, res) => {
   const {title, content, tags} = req.body;
@@ -34,6 +35,78 @@ const createPost = asyncHandler( async(req, res) => {
   )
 })
 
+const getPosts = asyncHandler(async( req, res ) => {
+  const page = Number(req.query.page) || 1    // default to page 1 if not provided
+  const limit = Number(req.query.limit) || 10 // default to 10 posts per page if not provided
+  const skip = (page - 1) * limit // calculate the number of posts to skip based on the current page and limit
+
+  const posts = await Post.find({ 
+      college: req.user.college 
+    }
+  ).skip(skip).limit(limit)
+
+  return res
+  .status(200)
+  .json(
+    new ApiResponse("200", posts, "Posts fetched successfully")
+  )
+})
+
+const likeAPost = asyncHandler(async(req, res) => {
+  const postId = req.params.id;
+
+  const post = await Post.findById(postId)
+  if(!post){
+    throw new ApiError(401, "Wasnt able to find the Id")
+  }
+  const alreadyLiked = post.likes.includes(req.user.id)
+
+  const updateLike = await Post.findByIdAndUpdate(
+    postId,
+    alreadyLiked? { $pull: {likes: req.user.id}} : {$addToSet: {likes: req.user.id}},
+    {new: true}
+  )
+
+
+
+  return res.
+  status(200)
+  .json(new ApiResponse(201, updateLike, "Video was liked successfully"))
+})
+
+const deleteAPost = asyncHandler(async(req, res) => {
+  const postId = req.params.id;
+  const post = await Post.findById(postId)
+  if(!post){
+    throw new ApiError(401, "Post Id is not valid")
+  }
+
+  const isOwner = post.owner.toString() === req.user.id.toString()
+  const isModerator = req.user.role === "moderator"
+  const isAdmin = req.user.role === "admin"
+
+  if(!isOwner && !isModerator && !isAdmin){
+    throw new ApiError(403, "Not authorized to delete this post")
+  }
+
+  const deletedThPost = await Post.findByIdAndDelete(
+    postId,
+    {new: true}
+  )
+
+
+  return res
+  .status(201)
+  .json(
+    new ApiResponse(201, deletedThPost, "Post was deleted successfully")
+  )
+})
+
+
 export {
   createPost,
+  getPosts,
+  likeAPost,
+  deleteAPost,
 }
+

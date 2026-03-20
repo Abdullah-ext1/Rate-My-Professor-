@@ -15,6 +15,19 @@ const commentSchema = new Schema({
     type: String,
     required: true,
   },
+  replies: {
+    type: [{
+      type: Schema.Types.ObjectId,
+      ref: "Comment",
+    }],
+    default: [],
+  },
+  commentLike: {
+    type: [{
+      type: Schema.Types.ObjectId,
+      ref: "User"
+    }]
+  }
 }, {timestamps: true});
 
 export const Comment = mongoose.model("Comment", commentSchema);
