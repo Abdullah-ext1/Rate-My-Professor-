@@ -18,12 +18,14 @@ const attendanceSchema = new Schema({
   classAttended: {
     type: Number,
     required: true,
+    default: 0,
     min: 0
   },
   totalClasses: {
     type: Number,
     required: true,
-    min: 1
+    default: 0,
+    min: 0
   }
 }, { timestamps: true ,
   toJSON: { virtuals: true },
