@@ -6,7 +6,7 @@ import cookieParser from 'cookie-parser';
 import passport from 'passport';
 import configurePassport from './middlewares/passport.js';
 import authroutes from './routes/auth.routes.js';
-import postRoutes from './routes/post.route.js';
+import postRoutes from './routes/post.routes.js';
 import professorRoutes from './routes/professor.routes.js';
 
 const app = express();

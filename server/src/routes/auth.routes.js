@@ -2,7 +2,7 @@ import { Router } from "express";
 import passport from "passport";
 import jwt from "jsonwebtoken";
 import {verifyJwt} from "../middlewares/verifyJwt.js"
-import { onboardingAuth } from "../controller/auth.controllers.js";
+import { onboardingAuth } from "../controller/auth.controller.js";
 
 const router = Router();
 

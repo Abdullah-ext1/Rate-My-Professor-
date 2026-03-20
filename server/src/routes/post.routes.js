@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createPost } from "../controller/post.controllers.js";
+import { createPost } from "../controller/post.controller.js";
 import { verifyJwt } from "../middlewares/verifyJwt.js";
 
 const router = Router();
