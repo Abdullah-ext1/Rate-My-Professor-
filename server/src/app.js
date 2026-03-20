@@ -9,6 +9,7 @@ import authroutes from './routes/auth.routes.js';
 import postRoutes from './routes/post.routes.js';
 import professorRoutes from './routes/professor.routes.js';
 import commentRoutes from "./routes/comment.routes.js"
+import ratingRoutes from "./routes/rating.routes.js"
 
 const app = express();
 
@@ -23,5 +24,6 @@ app.use("/api/auth", authroutes)
 app.use("/api/posts", postRoutes)
 app.use("/api/professor" , professorRoutes)
 app.use("/api/comments", commentRoutes)
+app.use("/api/ratings", ratingRoutes)
 
 export default app;
