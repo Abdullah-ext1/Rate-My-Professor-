@@ -1,8 +1,7 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js"
-import { Attendance } from "../models/attendence.models.js";
-
+import { Attendance } from "../models/attendance.models.js";
 
 const addSubject = asyncHandler(async (req, res) => {
     const { professor, subject } = req.body

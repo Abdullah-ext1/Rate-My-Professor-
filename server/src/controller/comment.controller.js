@@ -60,11 +60,60 @@ const replyToAComment = asyncHandler(async(req, res) => {
   return res
   .status(201)
   .json(
-    new ApiResponse(201, commentReply, "Reply was created Successfully")
+    new ApiResponse(201, [commentCreate, commentReply], "Reply was created Successfully")
+  )
+})
+
+const deleteAComment = asyncHandler(async(req, res) => {
+  const commentId = req.params.id
+  const comment = await Comment.findById(commentId)
+
+  if(!comment){
+    throw new ApiError(401, "Comment wasn't found")
+  }
+
+  const isOwner = comment.user.toString() === req.user.id.toString()
+  const isModerator = req.user.role === "moderator"
+  const isAdmin = req.user.role === "admin"
+
+  if(!isOwner && !isModerator && !isAdmin){
+    throw new ApiError(403, "Not authorized to delete this post")
+  }
+
+  const deletedThComment = await Comment.findByIdAndDelete(
+    commentId,
+    {new: true}
+  )
+
+  return res
+  .status(201)
+  .json(
+    new ApiResponse(201, deletedThComment, "Deleted the comment sucessfully")
+  )
+})
+
+const getAllCommentsOfAPost = asyncHandler(async (req, res) => {
+  const postId = req.params.id
+  const post = await Post.findById(postId)
+
+  if(!post){
+    throw new ApiError(400, "Post with that Id dosen't exists")
+  }
+
+  // populate takes the field name as first argument and selected fields as second argument. But you're passing "name" and "avatar" as two separate arguments.
+
+  const comment = await Comment.find({post: postId}).populate("user", "name avatar").populate("replies").populate("commentLike")
+
+  return res
+  .status(201)
+  .json(
+    new ApiResponse(201, comment, "All comments fetched successfully")
   )
 })
 
 export {
   createAComment,
   replyToAComment,
+  deleteAComment,
+  getAllCommentsOfAPost,
 }

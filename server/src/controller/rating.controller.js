@@ -1,4 +1,4 @@
-import { Rating } from "../models/rating.models";
+import {Rating} from "../models/rating.models.js"
 import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/ApiResponse.js";

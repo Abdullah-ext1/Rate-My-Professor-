@@ -45,6 +45,31 @@ const onboardingAuth = asyncHandler( async(req, res) => {
   )
 })
 
+const changeAccountDetails = asyncHandler(async (req, res) => {
+    // change name, username, college, department, year
+    const {name, username, department, year} = req.body
+
+    const user = await User.findByIdAndUpdate(req.user?.id,
+      {
+        $set: {
+          name,
+          username,
+          department,
+          year
+        }
+      }, 
+      { new: true }
+    )
+
+    return res
+    .status(201)
+    .json(
+      new ApiResponse(201, user, "Account details changed successfully")
+    )
+});
+
+
 export {
   onboardingAuth,
+  changeAccountDetails
 }
