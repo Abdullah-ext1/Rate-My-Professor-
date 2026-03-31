@@ -13,6 +13,7 @@ import ratingRoutes from "./routes/rating.routes.js"
 import attendanceRoutes from "./routes/attendance.routes.js"
 import collegeRoutes from "./routes/college.routes.js"
 import notificationRoutes from "./routes/notification.routes.js";
+import leaderboardRoutes from "./routes/leaderboard.routes.js";
 
 const app = express();
 
@@ -31,5 +32,6 @@ app.use("/api/ratings", ratingRoutes)
 app.use("/api/attendance", attendanceRoutes)
 app.use("/api/colleges", collegeRoutes)
 app.use("/api/notifications", notificationRoutes)
+app.use("/api/leaderboard", leaderboardRoutes)
 
 export default app;
