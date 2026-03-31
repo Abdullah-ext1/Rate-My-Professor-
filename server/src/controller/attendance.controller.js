@@ -105,9 +105,30 @@ const bulkUpdateAttendance = asyncHandler(async (req, res) => {
         )
 })
 
+const deleteAttendance = asyncHandler(async (req, res) => {     
+    const { attendanceId } = req.params;
+    if (!attendanceId) {
+        throw new ApiError(403, "Invalid Attendance");
+    }
+    const attendance = await Attendance.findByIdAndDelete(attendanceId);
+    if (!attendance) {
+        throw new ApiError(404, "Attendance record not found");
+    }
+    return res
+        .status(200)
+        .json(  
+            new ApiResponse(
+                200,
+                null,
+                "Attendance record deleted successfully"
+            )
+        );
+})
+
 export {
     addSubject,
     markAttendance,
     getAttendance,
-    bulkUpdateAttendance
+    bulkUpdateAttendance,
+    deleteAttendance
 }
