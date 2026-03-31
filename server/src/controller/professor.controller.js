@@ -98,9 +98,30 @@ const searchProfessor = asyncHandler(async (req, res) => {
         )
 })
 
+const deleteProfessor = asyncHandler(async (req, res) => {
+    const professorId = req.params.id
+    if (!professorId) {
+        throw new ApiError(403, "Professor Id is required")
+    }
+    const professor = await Professor.findByIdAndDelete(professorId)
+    if (!professor) {
+        throw new ApiError(404, "Professor not found")
+    }
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                null,
+                "Professor deleted successfully"
+            )
+        );
+})
+
 export {
     addProfessor,
     getProfessor,
     searchProfessor,
-    getProfessorById
+    getProfessorById,
+    deleteProfessor
 }
