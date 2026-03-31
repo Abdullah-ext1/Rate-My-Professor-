@@ -2,6 +2,7 @@ import { Professor } from "../models/professor.models.js";
 import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import { getCollegeFilter } from "../utils/collegeFilter.js";
 
 const addProfessor = asyncHandler(async (req, res) => {
     const { name, department, subjects } = req.body
@@ -34,7 +35,7 @@ const getProfessor = asyncHandler(async (req, res) => {
     const limit = Number(req.query.limit) || 10
     const skip = (page - 1) * limit
 
-    const professor = await Professor.find({ college: req.user.college }).skip(skip).limit(limit)
+    const professor = await Professor.find(getCollegeFilter(req.user)).skip(skip).limit(limit)
 
     return res
         .status(200)
@@ -80,13 +81,10 @@ const searchProfessor = asyncHandler(async (req, res) => {
     }
 
     const search = await Professor.find({
-        name: {
-            $regex: name,
-            $options: "i"  //'i' for case-insensitive
-        },
-        college: req.user.college,
-    },
-    ).select("name department subjects")
+        name: { $regex: name, $options: "i" },
+        ...getCollegeFilter(req.user)
+    }).select("name department subjects")
+
 
 
     return res

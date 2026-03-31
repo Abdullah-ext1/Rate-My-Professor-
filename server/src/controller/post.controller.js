@@ -1,11 +1,9 @@
-import { User } from "../models/users.models.js";
 import { Post } from "../models/post.models.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { Comment } from "../models/comment.models.js";
-import { Notification } from "../models/notification.models.js";
 import { createNotification } from "./notification.controller.js";
+import { getCollegeFilter } from "../utils/collegeFilter.js";
 
 const createPost = asyncHandler( async(req, res) => {
   const {title, content, tags} = req.body;
@@ -42,10 +40,8 @@ const getPosts = asyncHandler(async( req, res ) => {
   const limit = Number(req.query.limit) || 10 // default to 10 posts per page if not provided
   const skip = (page - 1) * limit // calculate the number of posts to skip based on the current page and limit
 
-  const posts = await Post.find({ 
-      college: req.user.college 
-    }
-  ).skip(skip).limit(limit)
+  const filter = req.user.role === 'admin' ? {} : { college: req.user.college }
+  const posts = await Post.find(filter).skip(skip).limit(limit)
 
   return res
   .status(200)
@@ -110,11 +106,61 @@ const deleteAPost = asyncHandler(async(req, res) => {
   )
 })
 
+const getPostById = asyncHandler(async (req, res) => {
+  const postId = req.params.id
+  if(!postId){
+    throw new ApiError(401, "Post Id is neccessarry")
+  }
+
+  const postSearch = await Post.findById(postId)
+  if(!postSearch){
+    throw new ApiError(401, "Post with this Id dosen't exists")
+  }
+  
+  const post = await Post.findByIdAndUpdate(postId, {
+    $inc: {views: 1},
+  }, {new: true})
+
+  return res
+  .status(201)
+  .json(
+    new ApiResponse(201, post, "View of the post was increemented successfully")
+  )
+})
+
+const getTrendingPosts = asyncHandler(async (req, res) => {
+  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+
+  const posts = await Post.aggregate([
+    // $match — filter by college and date
+    // $addFields — add likesCount field
+    // $sort — sort by likesCount descending
+
+    { $match: { 
+      ...getCollegeFilter(req.user),
+      createdAt: { $gte: twentyFourHoursAgo } 
+    }},
+    { $addFields: { 
+      likesCount: { $size: "$likes" } 
+    }},
+    { $sort: { likesCount: -1 }},
+    { $limit: 10 }
+  ])
+
+
+  return res
+  .status(200)
+  .json(
+    new ApiResponse(200, posts, "Trending posts fetched")
+  )
+})
 
 export {
   createPost,
   getPosts,
   likeAPost,
   deleteAPost,
+  getPostById,
+  getTrendingPosts
 }
 
