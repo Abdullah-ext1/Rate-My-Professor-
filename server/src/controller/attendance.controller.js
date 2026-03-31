@@ -70,8 +70,44 @@ const getAttendance = asyncHandler(async (req, res) => {
         )
 })
 
+const bulkUpdateAttendance = asyncHandler(async (req, res) => {
+    const { lecturesAttended, totalLectures } = req.body
+
+    if(!lecturesAttended || !totalLectures) {
+        throw new ApiError(400, "Invalid input")
+    }
+
+    const attendance = req.params.id
+
+    const attendanceId = await Attendance.findById(attendance)
+
+    if(!attendanceId){
+        throw new ApiError (404, "Attendance record not found")
+    }
+
+    const bulkAttendance = await Attendance.findByIdAndUpdate(attendance, 
+        {
+            $set:{
+                classAttended: lecturesAttended,
+                totalClasses: totalLectures
+            },
+        }, { new: true }
+    )
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                bulkAttendance,
+                "Bulk update successful"
+            )
+        )
+})
+
 export {
     addSubject,
     markAttendance,
-    getAttendance
+    getAttendance,
+    bulkUpdateAttendance
 }
