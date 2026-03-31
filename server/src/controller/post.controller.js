@@ -4,6 +4,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { Comment } from "../models/comment.models.js";
+import { createNotification } from "../models/notification.models.js";
 
 const createPost = asyncHandler( async(req, res) => {
   const {title, content, tags} = req.body;
@@ -67,11 +68,17 @@ const likeAPost = asyncHandler(async(req, res) => {
     {new: true}
   )
 
+  const notifcation = await createNotification({
+    userId: post.owner,
+    type: 'like',
+    postId: post._id,
+    content: 'Someone liked your post'
+  })
 
 
   return res.
   status(200)
-  .json(new ApiResponse(201, updateLike, "Video was liked successfully"))
+  .json(new ApiResponse(201, [updateLike, notification], "Video was liked successfully"))
 })
 
 const deleteAPost = asyncHandler(async(req, res) => {

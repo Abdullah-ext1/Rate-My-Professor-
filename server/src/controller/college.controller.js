@@ -72,6 +72,8 @@ const deleteCollege = asyncHandler(async (req, res) => {
   )
 })
 
+
+
 export {
   addCollege,
   updateCollegeDetails,

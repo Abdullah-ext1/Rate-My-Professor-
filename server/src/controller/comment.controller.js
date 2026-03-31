@@ -111,9 +111,39 @@ const getAllCommentsOfAPost = asyncHandler(async (req, res) => {
   )
 })
 
+const likeAComment = asyncHandler(async(req, res) => {
+  const commentId = req.params.id
+  const comment = await Comment.findById(commentId)
+
+  if(!comment){
+    throw new ApiError(400, "Comment with that Id dosen't exists")
+  }
+
+  const alreadyLiked = comment.commentLike.includes(req.user.id)
+
+  const updateLike = await Comment.findByIdAndUpdate(
+    commentId,
+    alreadyLiked? 
+      { 
+        $pull: {commentLike: req.user.id}
+      } : 
+      {
+        $addToSet: {commentLike: req.user.id}
+      },
+      {new: true}
+  )
+
+  return res
+  .status(201)
+  .json(
+    new ApiResponse(201, updateLike, alreadyLiked? "Comment was unliked successfully" : "Comment was liked successfully")
+  )
+})
+
 export {
   createAComment,
   replyToAComment,
   deleteAComment,
+  likeAComment,
   getAllCommentsOfAPost,
 }
