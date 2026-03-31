@@ -68,8 +68,20 @@ const changeAccountDetails = asyncHandler(async (req, res) => {
     )
 });
 
+const logOutUser = asyncHandler(async (req, res) => {
+ 
+  const options = {
+    httpOnly: true,
+    secure: true
+  }
+    return res
+        .status(200)
+        .clearCookie("accessToken", options)
+        .json(new ApiResponse(200, {}, "User logged out successfully"))
+})
 
 export {
   onboardingAuth,
-  changeAccountDetails
+  changeAccountDetails,
+  logOutUser
 }

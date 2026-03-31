@@ -2,7 +2,7 @@ import { Router } from "express";
 import passport from "passport";
 import jwt from "jsonwebtoken";
 import {verifyJwt} from "../middlewares/verifyJwt.js"
-import { changeAccountDetails, onboardingAuth } from "../controller/auth.controller.js";
+import { changeAccountDetails, logOutUser, onboardingAuth } from "../controller/auth.controller.js";
 
 const router = Router();
 
@@ -25,5 +25,6 @@ router.get("/google/callback", passport.authenticate("google", {session: false})
 
 router.put("/onboarding", verifyJwt, onboardingAuth)
 router.put("/profile", verifyJwt, changeAccountDetails)
+router.post("/logout", verifyJwt, logOutUser)
 
 export default router;
