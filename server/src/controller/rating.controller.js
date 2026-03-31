@@ -55,11 +55,8 @@ const getRatings = asyncHandler(async (req, res) => {
 
     const ratings = await Rating.find({ professor: professorId }).populate("user", "name");
 
-    if (ratings.length === 0) {
-        throw new ApiError(404, "No ratings found for this professor");
-    }
-    const averageRating = ratings.reduce((acc, curr) => acc + curr.rating, 0) / ratings.length;
-
+    const averageRating = ratings.length > 0 ? ratings.reduce((acc, curr) => acc + curr.rating, 0) / ratings.length : 0
+    
     return res
         .status(200)
         .json(
