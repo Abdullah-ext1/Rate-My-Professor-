@@ -68,7 +68,29 @@ const getRatings = asyncHandler(async (req, res) => {
         );
 });
 
+const deleteRating = asyncHandler(async (req, res) => {
+    const { ratingId } = req.params;    
+    if (!ratingId) {
+        throw new ApiError(403, "Invalid Rating");
+    }
+    const rating = await Rating.findByIdAndDelete(ratingId);
+    if (!rating) {
+        throw new ApiError(404, "Rating not found");
+    }
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                null,
+                "Rating deleted successfully"
+            )
+        );
+});
+
+
 export {
     addRating,
-    getRatings
+    getRatings,
+    deleteRating
 }
