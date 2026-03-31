@@ -3,6 +3,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { Comment } from "../models/comment.models.js";
 import { Post } from "../models/post.models.js";
+import { createNotification } from "./notification.controller.js";
 
 const createAComment = asyncHandler(async(req, res) => {
   const postId = req.params.postId;
@@ -55,12 +56,19 @@ const replyToAComment = asyncHandler(async(req, res) => {
       $push: { replies: commentCreate._id }
     },
     { new: true }
-    )
+  )
+
+  const createdNotification = await createNotification({
+    userId: comment.user,
+    type: "comment",
+    commentId: comment.id,
+    content: "Somebody replied to your comment"
+  })
 
   return res
   .status(201)
   .json(
-    new ApiResponse(201, [commentCreate, commentReply], "Reply was created Successfully")
+    new ApiResponse(201, [commentCreate, commentReply, createdNotification], "Reply was created Successfully")
   )
 })
 
@@ -133,10 +141,17 @@ const likeAComment = asyncHandler(async(req, res) => {
       {new: true}
   )
 
+  const createdNotification = await createNotification({
+    userId: comment.user,
+    type: "like",
+    commentId: comment.id,
+    content: "Somebody liked your commented"
+  })
+
   return res
   .status(201)
   .json(
-    new ApiResponse(201, updateLike, alreadyLiked? "Comment was unliked successfully" : "Comment was liked successfully")
+    new ApiResponse(201, [updateLike, createdNotification], alreadyLiked? "Comment was unliked successfully" : "Comment was liked successfully")
   )
 })
 
