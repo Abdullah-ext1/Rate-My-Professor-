@@ -34,6 +34,14 @@ const userSchema = new mongoose.Schema({
     type: Schema.Types.ObjectId,
     ref: 'College'
   },
+  isBanned: {
+    type: Boolean,
+    default: false
+  },
+  bannedUntil: {
+    type: Date,
+    default: null
+  }
 }, { timestamps: true });
 
 export const User = mongoose.model('User', userSchema);

@@ -80,8 +80,53 @@ const logOutUser = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, {}, "User logged out successfully"))
 })
 
+const bannedUser = asyncHandler(async (req, res) => {
+  const userId = req.params.id
+  if(!userId){
+    throw new ApiError(401, "User Id is required")
+  }
+
+  const user = await User.findById(userId)
+  if(!user){
+    throw new ApiError(401, "User doesnt exists")
+  }
+
+  const banUser = await User.findByIdAndUpdate(userId, {isBanned: true})
+  return res
+  .status(201)
+  .json(
+    new ApiResponse(201, banUser, "User was banned successfully")
+  )
+})
+
+const suspendUser = asyncHandler(async(req, res) => {
+  const userId = req.params.id
+  if(!userId){
+    throw new ApiError(401, "User Id is required")
+  }
+
+  const user = await User.findById(userId)
+  if(!user){
+    throw new ApiError(401, "User doesnt exists")
+  }
+
+  const banUser = await User.findByIdAndUpdate(userId, 
+    { 
+      isBanned: true,
+      bannedUntil: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
+    }
+  )
+  return res
+  .status(201)
+  .json(
+    new ApiResponse(201, banUser, "User was suspended for 14 days successfully")
+  )
+})
+
 export {
   onboardingAuth,
   changeAccountDetails,
-  logOutUser
+  logOutUser,
+  bannedUser,
+  suspendUser
 }

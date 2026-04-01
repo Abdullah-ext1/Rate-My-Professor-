@@ -18,6 +18,10 @@ const verifyJwt = asyncHandler( async (req, res, next) => {
       throw new ApiError(401,  "Invalid Access token")
     }
 
+    if(user.isBanned && user.bannedUntil > new Date()){
+      throw new ApiError(403, "You are banned until " + user.bannedUntil)
+    }
+
     req.user = user; // attaches user to request
     next(); // let request move forward from the middleware
   } catch (error) {
