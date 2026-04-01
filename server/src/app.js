@@ -15,6 +15,7 @@ import collegeRoutes from "./routes/college.routes.js"
 import notificationRoutes from "./routes/notification.routes.js";
 import leaderboardRoutes from "./routes/leaderboard.routes.js";
 import announcementRoutes from "./routes/announcement.routes.js";
+import pyqsRoutes from "./routes/pyqs.routes.js"
 
 const app = express();
 
@@ -35,5 +36,6 @@ app.use("/api/colleges", collegeRoutes)
 app.use("/api/notifications", notificationRoutes)
 app.use("/api/leaderboard", leaderboardRoutes)
 app.use("/api/announcements", announcementRoutes)
+app.use("/api/pyqs", pyqsRoutes)
 
 export default app;
