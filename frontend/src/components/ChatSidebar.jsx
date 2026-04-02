@@ -8,7 +8,6 @@ const ChatSidebar = ({ activeView = 'chat' }) => {
     { id: 'pyq', label: 'PYQs', icon: 'pyq' },
     { id: 'notifications', label: 'Notifications', badge: '3', icon: 'notifications' },
     { id: 'chat', label: 'Global Chat', badge: '5', icon: 'chat' },
-    { id: 'profile', label: 'Profile', icon: 'profile' },
   ];
 
   const renderIcon = (iconType) => {
@@ -19,7 +18,6 @@ const ChatSidebar = ({ activeView = 'chat' }) => {
       pyq: <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M4 2h8a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1z"/><path d="M6 6h4M6 9h4M6 12h2"/></svg>,
       notifications: <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M8 1a5 5 0 015 5v3l1.5 2H1.5L3 9V6a5 5 0 015-5z"/><path d="M6.5 13a1.5 1.5 0 003 0"/></svg>,
       chat: <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M14 10a2 2 0 01-2 2H5l-3 3V4a2 2 0 012-2h8a2 2 0 012 2v6z"/></svg>,
-      profile: <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="8" cy="5" r="2.5"/><path d="M2.5 14a5.5 5.5 0 0111 0"/></svg>,
     };
     return icons[iconType];
   };
@@ -51,7 +49,7 @@ const ChatSidebar = ({ activeView = 'chat' }) => {
       ))}
 
       <div className="sidebar-footer">
-        <div className="user-row" onClick={() => handleNavClick('profile')} style={{ cursor: 'pointer' }}>
+        <div className="user-row">
           <div className="avatar">AX</div>
           <div>
             <div className="user-name">Anonymous fox</div>

@@ -8,7 +8,6 @@ import Professors from './pages/Professors'
 import Attendance from './pages/Attendance'
 import PYQ from './pages/PYQ'
 import Notifications from './pages/Notifications'
-import Profile from './pages/Profile'
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
@@ -38,7 +37,6 @@ function App() {
           <Route path="/attendance" element={<Attendance />} />
           <Route path="/pyq" element={<PYQ />} />
           <Route path="/notifications" element={<Notifications />} />
-          <Route path="/profile" element={<Profile />} />
         </Routes>
       )}
     </BrowserRouter>
