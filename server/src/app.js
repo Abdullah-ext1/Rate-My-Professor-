@@ -5,6 +5,18 @@ import express from 'express';
 import cookieParser from 'cookie-parser';
 import passport from 'passport';
 import configurePassport from './middlewares/passport.js';
+
+
+const app = express();
+
+configurePassport();
+
+app.use(express.json());
+app.use(cookieParser());
+app.use(passport.initialize());
+
+
+//routes import
 import authroutes from './routes/auth.routes.js';
 import postRoutes from './routes/post.routes.js';
 import professorRoutes from './routes/professor.routes.js';
@@ -17,15 +29,7 @@ import leaderboardRoutes from "./routes/leaderboard.routes.js";
 import announcementRoutes from "./routes/announcement.routes.js";
 import pyqsRoutes from "./routes/pyqs.routes.js"
 
-const app = express();
-
-configurePassport();
-
-app.use(express.json());
-app.use(cookieParser());
-app.use(passport.initialize());
-
-
+//routes use
 app.use("/api/auth", authroutes)
 app.use("/api/posts", postRoutes)
 app.use("/api/professor" , professorRoutes)
