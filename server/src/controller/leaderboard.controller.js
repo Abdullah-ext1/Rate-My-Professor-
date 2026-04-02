@@ -3,7 +3,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { Rating } from "../models/rating.models.js";
 
 const getLeaderboard = asyncHandler(async (req, res) => {
-    const laederboard = await Rating.aggregate([
+    const leaderboard = await Rating.aggregate([
         {
             $lookup: {
                 from: "professors",
@@ -39,7 +39,7 @@ const getLeaderboard = asyncHandler(async (req, res) => {
         .json(
             new ApiResponse(
                 200,
-                laederboard,
+                leaderboard,
                 "Leaderboard fetched successfully"
             )
         )   
