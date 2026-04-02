@@ -3,14 +3,14 @@ import {
     createAnnouncement,
     getAllAnnouncements,
     deleteAnnouncement
-} from '../controllers/announcement.controller.js';
-import verifyModerator from '../middlewares/verifyModerator.js';
-import verifyjwt from '../middlewares/verifyJwt.js';
+} from "../controller/announcement.controller.js"
+import { verifyModerator } from '../middlewares/verifyModerator.js';
+import { verifyJwt } from '../middlewares/verifyJwt.js';
 
 
 const router = Router();
 
-router.route('/create').post(verifyjwt, verifyModerator, createAnnouncement);
-router.route('/all').get(verifyjwt, getAllAnnouncements);
-router.route('/:id').delete(verifyjwt, verifyModerator, deleteAnnouncement);
+router.route('/create').post(verifyJwt, verifyModerator, createAnnouncement);
+router.route('/all').get(verifyJwt, getAllAnnouncements);
+router.route('/:id').delete(verifyJwt, verifyModerator, deleteAnnouncement);
 export default router;
