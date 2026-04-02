@@ -1,0 +1,9 @@
+/* Notifications.css - Notifications page styles */
+
+.notif-content {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 720px;
+}

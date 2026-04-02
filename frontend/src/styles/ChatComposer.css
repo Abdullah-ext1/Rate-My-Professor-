@@ -1,0 +1,136 @@
+/* ChatComposer.css - Message composer component styles */
+
+.chat-composer {
+  padding: 14px 24px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+  flex-shrink: 0;
+}
+
+.composer-wrap {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  padding: 12px 14px;
+  transition: border-color 0.15s;
+}
+
+.composer-wrap:focus-within {
+  border-color: rgba(83, 74, 183, 0.5);
+}
+
+.composer-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.composer-av {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: rgba(83, 74, 183, 0.3);
+  border: 1px solid rgba(83, 74, 183, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--p-mid);
+  flex-shrink: 0;
+  margin-top: 2px;
+  font-family: 'Syne', sans-serif;
+}
+
+.composer-input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-size: 14px;
+  font-family: 'DM Sans', sans-serif;
+  resize: none;
+  line-height: 1.55;
+  min-height: 22px;
+  max-height: 120px;
+}
+
+.composer-input::placeholder {
+  color: var(--text3);
+}
+
+.composer-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.composer-hint {
+  font-size: 11px;
+  color: var(--text3);
+}
+
+.composer-hint span {
+  color: var(--text2);
+}
+
+.composer-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.emoji-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text3);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  transition: all 0.15s;
+}
+
+.emoji-btn:hover {
+  background: var(--bg3);
+  border-color: var(--border2);
+  color: var(--text2);
+}
+
+.send-btn {
+  padding: 7px 16px;
+  background: var(--p);
+  color: white;
+  border: none;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.15s;
+}
+
+.send-btn:hover {
+  background: var(--p2);
+}
+
+.send-btn svg {
+  width: 13px;
+  height: 13px;
+}
+
+.send-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

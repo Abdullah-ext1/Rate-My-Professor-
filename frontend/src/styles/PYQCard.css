@@ -1,0 +1,80 @@
+/* PYQCard.css - PYQ card component styles */
+
+.pyq-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.pyq-card:hover {
+  border-color: var(--border2);
+}
+
+.pyq-info {
+  flex: 1;
+}
+
+.pyq-subject {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.pyq-meta {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.pyq-badge {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+
+.badge-endsem {
+  background: rgba(29, 158, 117, 0.15);
+  color: #5DCAA5;
+  border: 1px solid rgba(29, 158, 117, 0.2);
+}
+
+.badge-midsem {
+  background: rgba(239, 159, 39, 0.15);
+  color: var(--amber);
+  border: 1px solid rgba(239, 159, 39, 0.2);
+}
+
+.badge-internal {
+  background: rgba(83, 74, 183, 0.15);
+  color: var(--p-mid);
+  border: 1px solid rgba(83, 74, 183, 0.2);
+}
+
+.pyq-year {
+  font-size: 11px;
+  color: var(--text3);
+}
+
+.download-btn {
+  font-size: 12px;
+  padding: 6px 14px;
+  background: rgba(83, 74, 183, 0.15);
+  border: 1px solid rgba(83, 74, 183, 0.3);
+  border-radius: 8px;
+  color: var(--p-mid);
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+
+.download-btn:hover {
+  background: rgba(83, 74, 183, 0.25);
+}
