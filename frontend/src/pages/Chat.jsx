@@ -69,14 +69,6 @@ const Chat = () => {
             </div>
           </div>
           <div className="topbar-right">
-            <select className="college-filter" onChange={(e) => handleCollegeFilter(e.target.value)}>
-              <option value="all">All colleges</option>
-              <option value="rizvi">Rizvi</option>
-              <option value="sfit">SFIT</option>
-              <option value="vit">VIT</option>
-              <option value="saboo">Saboo Siddik</option>
-              <option value="djsc">DJ Sanghvi</option>
-            </select>
             <div className="online-pill">
               <div className="online-dot"></div>
               <span>247 online</span>
