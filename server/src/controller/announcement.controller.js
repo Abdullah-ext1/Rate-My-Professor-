@@ -1,7 +1,9 @@
-import { Post } from "../models/post.models";
+import { Post } from "../models/post.models.js";
+import { User } from "../models/users.models.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { createNotification } from "./notification.controller.js";
 
 const createAnnouncement = asyncHandler(async (req, res) => {
     const { title, content } = req.body;
@@ -18,12 +20,21 @@ const createAnnouncement = asyncHandler(async (req, res) => {
         isAnnouncement: true
     })
 
+    const users = await User.find({ college: req.user.college })
+
+    for (const user of users) {
+    await createNotification({
+        userId: user._id,
+        type: 'announcement',
+        content: 'Alert! An announcement has been made'
+    })}
+
     return res
         .status(201)
         .json(
             new ApiResponse(
-                true,
-                annnouncementPost,
+                201,
+                [annnouncementPost],
                 "Announcement created successfully"
             )
         )
@@ -37,7 +48,7 @@ const getAllAnnouncements = asyncHandler(async (req, res) => {
         .status(200)
         .json(
             new ApiResponse(    
-                true,
+                201,
                 announcements,
                 "Announcements fetched successfully"
             )
@@ -63,7 +74,7 @@ const deleteAnnouncement = asyncHandler(async (req, res) => {
         .status(200)
         .json(
             new ApiResponse(
-                true,
+                201,
                 null,
                 "Announcement deleted successfully"
             )
