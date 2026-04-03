@@ -31,13 +31,8 @@ function App() {
 
   return (
     <div className="w-full h-screen bg-bg overflow-hidden flex flex-col">
-      {/* Fixed Header */}
-      <div className="fixed top-0 left-0 right-0 z-40">
-        <StatusBar />
-      </div>
-
-      {/* Scrollable Content - with top padding for header and bottom padding for footer */}
-      <div className="flex-1 overflow-y-auto mt-12 mb-16 w-full">
+      {/* Scrollable Content - bottom padding for footer */}
+      <div className="flex-1 overflow-y-auto mb-16 w-full">
         {renderScreen()}
       </div>
 

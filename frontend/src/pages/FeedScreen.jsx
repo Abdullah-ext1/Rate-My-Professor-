@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 const TopNav = () => (
-  <div className="fixed top-12 left-0 right-0 bg-bg px-4 py-2.5 flex items-center justify-between flex-shrink-0 border-b border-border z-30">
+  <div className="fixed top-0 left-0 right-0 bg-bg px-4 py-2.5 flex items-center justify-between flex-shrink-0 border-b border-border z-30">
     <div className="flex items-center gap-2">
       <div className="text-base font-bold text-text font-syne tracking-tight">
         campus<span className="text-primary-mid">.</span>
@@ -19,7 +19,7 @@ const TopNav = () => (
 );
 
 const HorizontalTabs = ({ tabs, activeTab, setActiveTab }) => (
-  <div className="fixed top-20 left-0 right-0 flex gap-0 border-b border-border bg-bg overflow-x-auto scrollbar-hide flex-shrink-0 px-4 z-30">
+  <div className="fixed top-12 left-0 right-0 flex gap-0 border-b border-border bg-bg overflow-x-auto scrollbar-hide flex-shrink-0 px-4 z-30">
     {tabs.map(tab => (
       <button
         key={tab}
@@ -37,7 +37,7 @@ const HorizontalTabs = ({ tabs, activeTab, setActiveTab }) => (
 );
 
 const ScrollArea = ({ children }) => (
-  <div className="flex-1 overflow-y-auto px-3.5 py-3 flex flex-col gap-2.5 scrollbar-hide bg-bg pt-24">
+  <div className="flex-1 overflow-y-auto px-3.5 py-3 flex flex-col gap-2.5 scrollbar-hide bg-bg pt-20">
     {children}
   </div>
 );
