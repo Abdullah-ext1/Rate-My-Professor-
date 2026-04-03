@@ -68,6 +68,15 @@ const changeAccountDetails = asyncHandler(async (req, res) => {
     )
 });
 
+const getCurrentUser = asyncHandler(async (req, res) => {
+
+  return res
+  .status(201)
+  .json(
+    new ApiResponse(201, req.user, "User has been fetched successfully")
+  )
+})
+
 const logOutUser = asyncHandler(async (req, res) => {
  
   const options = {
@@ -126,6 +135,7 @@ const suspendUser = asyncHandler(async(req, res) => {
 export {
   onboardingAuth,
   changeAccountDetails,
+  getCurrentUser,
   logOutUser,
   bannedUser,
   suspendUser

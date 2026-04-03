@@ -6,14 +6,7 @@ const Login = ({ onLogin }) => {
 
   const handleGoogleLogin = () => {
     setLoading(true);
-    // Simulate login process
-    setTimeout(() => {
-      console.log('Google login clicked');
-      if (onLogin) {
-        onLogin();
-      }
-      // In production, this would call Google OAuth API
-    }, 1000);
+    window.location.href = 'http://localhost:9000/api/auth/google';
   };
 
   return (

@@ -5,11 +5,17 @@ import express from 'express';
 import cookieParser from 'cookie-parser';
 import passport from 'passport';
 import configurePassport from './middlewares/passport.js';
+import cors from "cors";
 
 
 const app = express();
 
 configurePassport();
+
+app.use(cors({
+    origin: process.env.CORS,
+    credentials: true
+}))
 
 app.use(express.json());
 app.use(cookieParser());
