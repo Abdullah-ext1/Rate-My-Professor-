@@ -86,13 +86,11 @@ const Announcements = () => {
     <div className="app-layout">
       <ChatSidebar activeView="announcements" />
       <div className="main">
-      <div className="announcements-container">
-        <div className="announcements-header">
-          <h1 className="announcements-title">📢 Campus Announcements</h1>
-          <p className="announcements-sub">Important updates, events, and opportunities from your college</p>
+        <div className="topbar">
+          <div className="page-title">📢 Announcements</div>
         </div>
-
-        <div className="announcements-list">
+        <div className="announcements-container">
+          <div className="announcements-list">
           {announcements.map((ann) => (
             <div key={ann.id} className={`announcement-card ann-type-${ann.type}`}>
               <div className="ann-left">
@@ -120,7 +118,7 @@ const Announcements = () => {
         <div className="announcements-footer">
           <button className="view-more-btn">Load More Announcements</button>
         </div>
-      </div>
+        </div>
       </div>
     </div>
   );

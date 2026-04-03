@@ -130,13 +130,11 @@ const Leaderboard = () => {
     <div className="app-layout">
       <ChatSidebar activeView="leaderboard" />
       <div className="main">
-      <div className="leaderboard-container">
-        <div className="leaderboard-header">
-          <h1 className="leaderboard-title">⭐ Professor Leaderboard</h1>
-          <p className="leaderboard-sub">Top 10 professors ranked by student ratings</p>
+        <div className="topbar">
+          <div className="page-title">⭐ Leaderboard</div>
         </div>
-
-        <div className="leaderboard-table">
+        <div className="leaderboard-container">
+          <div className="leaderboard-table">
           <div className="leaderboard-head">
             <div className="lb-rank">Rank</div>
             <div className="lb-prof">Professor</div>
@@ -165,6 +163,7 @@ const Leaderboard = () => {
             </div>
           ))}
         </div>
+        </div>
 
         <div className="leaderboard-tips">
           <h3 className="tip-title">💡 How Ratings Work</h3>
@@ -187,7 +186,6 @@ const Leaderboard = () => {
             </div>
           </div>
         </div>
-      </div>
       </div>
     </div>
   );

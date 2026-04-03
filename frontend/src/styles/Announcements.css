@@ -11,29 +11,37 @@
   min-height: 100vh;
 }
 
+.topbar {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.page-title {
+  font-size: 18px;
+  font-weight: 600;
+  font-family: 'Syne', sans-serif;
+  color: var(--text);
+}
+
 .announcements-container {
   padding: 20px 24px;
   display: flex;
   flex-direction: column;
   gap: 14px;
-  max-width: 900px;
+  max-width: 800px;
+  flex: 1;
+  overflow-y: auto;
 }
 
 .announcements-header {
-  margin-bottom: 24px;
-}
-
-.announcements-title {
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--text);
-  margin-bottom: 8px;
-  font-family: 'Poppins', sans-serif;
-}
-
-.announcements-sub {
-  font-size: 14px;
-  color: var(--text2);
+  display: none;
 }
 
 .announcements-list {
@@ -47,9 +55,9 @@
   background: var(--bg2);
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 18px;
+  padding: 12px 14px;
   display: flex;
-  gap: 14px;
+  gap: 12px;
   transition: all 0.2s;
   cursor: pointer;
   position: relative;
@@ -92,7 +100,7 @@
 }
 
 .ann-type-icon {
-  font-size: 32px;
+  font-size: 22px;
 }
 
 .ann-middle {
@@ -101,25 +109,25 @@
 }
 
 .ann-title {
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--text);
-  margin-bottom: 6px;
+  margin-bottom: 4px;
   line-height: 1.4;
 }
 
 .ann-content {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text2);
-  line-height: 1.6;
-  margin-bottom: 10px;
+  line-height: 1.5;
+  margin-bottom: 8px;
 }
 
 .ann-meta {
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: 12px;
+  gap: 10px;
+  font-size: 10px;
   color: var(--text3);
   flex-wrap: wrap;
 }
@@ -127,12 +135,12 @@
 .ann-type-badge {
   background: rgba(83, 74, 183, 0.15);
   color: #8B84D4;
-  padding: 3px 8px;
-  border-radius: 6px;
+  padding: 2px 6px;
+  border-radius: 5px;
   font-weight: 500;
-  font-size: 11px;
+  font-size: 9px;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.02em;
 }
 
 .ann-date {
@@ -149,36 +157,36 @@
 }
 
 .ann-views {
-  font-size: 20px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--text);
-  font-family: 'Poppins', sans-serif;
+  font-family: 'Syne', sans-serif;
 }
 
 .views-label {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--text3);
-  margin-top: 4px;
+  margin-top: 2px;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.02em;
 }
 
 .announcements-footer {
   text-align: center;
-  margin-top: 20px;
+  margin-top: 12px;
 }
 
 .view-more-btn {
-  padding: 12px 28px;
+  padding: 10px 22px;
   background: rgba(83, 74, 183, 0.15);
   border: 1px solid rgba(83, 74, 183, 0.3);
   border-radius: 10px;
   color: #8B84D4;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
-  font-family: 'Poppins', sans-serif;
+  font-family: 'Syne', sans-serif;
 }
 
 .view-more-btn:hover {
