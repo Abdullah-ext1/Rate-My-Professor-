@@ -8,6 +8,8 @@ import Professors from './pages/Professors'
 import Attendance from './pages/Attendance'
 import PYQ from './pages/PYQ'
 import Notifications from './pages/Notifications'
+import Leaderboard from './pages/Leaderboard'
+import Announcements from './pages/Announcements'
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
@@ -37,6 +39,8 @@ function App() {
           <Route path="/attendance" element={<Attendance />} />
           <Route path="/pyq" element={<PYQ />} />
           <Route path="/notifications" element={<Notifications />} />
+          <Route path="/leaderboard" element={<Leaderboard />} />
+          <Route path="/announcements" element={<Announcements />} />
         </Routes>
       )}
     </BrowserRouter>
