@@ -1,12 +1,21 @@
 import { useState } from 'react';
+import ProfessorReviewsScreen from './ProfessorReviewsScreen';
 
-const TopNav = () => (
+const TopNav = ({ onNavClick }) => (
   <div className="fixed top-0 left-0 right-0 bg-bg px-4 py-2.5 flex items-center justify-between flex-shrink-0 border-b border-border z-30">
     <div className="flex items-center gap-2">
       <div className="text-base font-bold text-text font-syne tracking-tight">
         campus<span className="text-primary-mid">.</span>
       </div>
       <div className="text-xs px-2 py-0.5 rounded-full bg-opacity-15 bg-primary border border-opacity-30 border-primary text-primary-mid font-medium">CS dept</div>
+    </div>
+    <div 
+      onClick={() => onNavClick('leaderboard')}
+      className="w-7 h-7 rounded-full bg-bg2 border border-border flex items-center justify-center relative cursor-pointer hover:bg-bg3 transition-colors"
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9B99B0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M8 21h8M12 17v4M7 4h10M6 4c-1.1 0-2 .9-2 2s.9 2 2 2h0c0 4 3 7 6 7s6-3 6-7h0c1.1 0 2-.9 2-2s-.9-2-2-2H6z" />
+      </svg>
     </div>
   </div>
 );
@@ -45,15 +54,19 @@ const SearchBar = () => (
   </div>
 );
 
-const ProfCard = ({ initials, name, subject, rating, reviews, tags }) => (
-  <div className="bg-bg2 border border-border rounded-3xl p-3.5 cursor-pointer hover:border-border2 transition-colors">
+const ProfCard = ({ initials, name, subject, rating, reviews, tags, rank, onRateClick, onReviewsClick }) => (
+  <div onClick={onReviewsClick} className="bg-bg2 border border-border rounded-3xl p-3.5 mb-3 cursor-pointer hover:border-border2 transition-colors relative">
+    <div className="absolute -top-2 -right-2 w-7 h-7 bg-bg3 border border-border rounded-full flex justify-center items-center font-bold font-syne text-sm shadow-sm"
+         style={{ color: rank === 1 ? '#FBBF24' : rank === 2 ? '#9CA3AF' : rank === 3 ? '#D97706' : '#9B99B0' }}>
+      #{rank}
+    </div>
     <div className="flex items-center gap-2.5 mb-2.5">
       <div className="w-9 h-9 rounded-2.5 bg-opacity-20 bg-primary flex items-center justify-center text-xs font-semibold text-primary-mid flex-shrink-0 font-syne">{initials}</div>
       <div className="flex-1">
         <div className="text-sm font-semibold text-text font-syne">{name}</div>
         <div className="text-xs text-text3 mt-0.5">{subject}</div>
       </div>
-      <div className="text-right">
+      <div className="text-right mr-4">
         <div className="text-xl font-bold text-accent-teal font-syne">{rating}</div>
         <div className="text-xs text-text3 mt-0.5">{reviews} reviews</div>
       </div>
@@ -65,7 +78,10 @@ const ProfCard = ({ initials, name, subject, rating, reviews, tags }) => (
         </span>
       ))}
     </div>
-    <div className="text-xs text-text2 leading-relaxed italic px-2.5 py-2 bg-bg3 rounded-2xl">"Missed 12 classes, still got signed. Study last 5 years PYQs."</div>
+    <div className="text-xs text-text2 leading-relaxed italic px-2.5 py-2 bg-bg3 rounded-2xl mb-2">"Missed 12 classes, still got signed. Study last 5 years PYQs."</div>
+    <button onClick={(e) => { e.stopPropagation(); onRateClick(); }} className="w-full mt-1 bg-border text-text font-semibold rounded-2xl py-2 text-xs hover:bg-border2 transition-colors cursor-pointer border border-transparent">
+      Rate Professor
+    </button>
   </div>
 );
 
@@ -107,18 +123,44 @@ const AttendanceCard = ({ status = 'safe', subject, prof, percent, attended, tot
 
 const ProfessorsScreen = ({ onNavClick }) => {
   const [activeTab, setActiveTab] = useState('professors');
+  const [selectedProfessor, setSelectedProfessor] = useState(null);
+
+  const professors = [
+    { initials: "AP", name: "Prof. A. Patil", subject: "Data Structures", rating: 4.7, reviews: 29, tags: ['Best in dept', 'Fair marking'], department: "CS" },
+    { initials: "VM", name: "Prof. V. Mehta", subject: "Database Management", rating: 4.2, reviews: 38, tags: ['Lenient attendance', 'Clear teaching', 'Tough exams'], department: "CS" },
+    { initials: "SR", name: "Prof. S. Rao", subject: "Operating Systems", rating: 2.9, reviews: 51, tags: ['Very strict', 'Marks internally'], department: "CS" },
+  ];
+
+  // Sort them by rating highest to lowest
+  const sortedProfessors = [...professors].sort((a, b) => b.rating - a.rating);
+
+  if (selectedProfessor) {
+    const prof = professors.find(p => p.name === selectedProfessor);
+    return <ProfessorReviewsScreen professor={prof} onBack={() => setSelectedProfessor(null)} />;
+  }
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden bg-bg relative">
-      <TopNav />
+      <TopNav onNavClick={onNavClick} />
       <HorizontalTabs activeTab={activeTab} setActiveTab={setActiveTab} />
       <ScrollArea>
         {activeTab === 'professors' ? (
           <>
             <SearchBar />
-            <ProfCard initials="VM" name="Prof. V. Mehta" subject="Database Management" rating="4.2" reviews="38" tags={['Lenient attendance', 'Clear teaching', 'Tough exams']} />
-            <ProfCard initials="SR" name="Prof. S. Rao" subject="Operating Systems" rating="2.9" reviews="51" tags={['Very strict', 'Marks internally']} />
-            <ProfCard initials="AP" name="Prof. A. Patil" subject="Data Structures" rating="4.7" reviews="29" tags={['Best in dept', 'Fair marking']} />
+            {sortedProfessors.map((prof, idx) => (
+              <ProfCard 
+                key={prof.name}
+                rank={idx + 1}
+                initials={prof.initials} 
+                name={prof.name} 
+                subject={prof.subject} 
+                rating={prof.rating.toFixed(1)} 
+                reviews={prof.reviews} 
+                tags={prof.tags}
+                onReviewsClick={() => setSelectedProfessor(prof.name)}
+                onRateClick={() => onNavClick('rate-professor')}
+              />
+            ))}
           </>
         ) : (
           <>
