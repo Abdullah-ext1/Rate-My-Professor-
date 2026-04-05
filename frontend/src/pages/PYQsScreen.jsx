@@ -89,12 +89,12 @@ const PYQCard = ({ subjectName, year, examType, isApproved }) => (
         <span className="text-xs text-text3">{examType}</span>
       </div>
     </div>
-    <div className="self-center">
-      <button className="w-8 h-8 rounded-full bg-bg3 flex items-center justify-center text-text3 hover:text-text hover:bg-border transition-colors">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
-        </svg>
-      </button>
+    <div className="absolute top-2 right-2 w-8 h-8 rounded-full bg-opacity-20 bg-primary flex items-center justify-center text-primary-mid group-hover:bg-primary group-hover:text-white transition-colors cursor-pointer">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+        <polyline points="7 10 12 15 17 10" />
+        <line x1="12" y1="15" x2="12" y2="3" />
+      </svg>
     </div>
   </div>
 );
@@ -224,9 +224,14 @@ const UploadModal = ({ isOpen, onClose }) => {
 };
 
 const PYQsScreen = ({ onNavClick }) => {
-  const [activeCategory, setActiveCategory] = useState('PYQs');
-  const [activeTab, setActiveTab] = useState('All');
+  const [activeTab, setActiveTab] = useState('pyqs');
+  const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleDownload = (link) => {
+    // Navigate to Google Drive or download link
+    window.open(link, '_blank');
+  };
 
   const pyqs = [
     { id: 1, subjectName: 'Data Structures', year: 2023, examType: 'End Semester', isApproved: true },
@@ -243,8 +248,8 @@ const PYQsScreen = ({ onNavClick }) => {
   ];
 
   // Filter based on active tab
-  const filteredItems = activeCategory === 'PYQs' 
-    ? (activeTab === 'All' ? pyqs : pyqs.filter(pyq => pyq.examType === activeTab))
+  const filteredItems = activeTab === 'pyqs' 
+    ? pyqs 
     : notes; // Notes don't currently have internal filtering tabs
 
   return (
@@ -252,11 +257,11 @@ const PYQsScreen = ({ onNavClick }) => {
       <TopNav onNavClick={onNavClick} />
       
       <div className="flex-1 overflow-y-auto px-4 pt-[60px] pb-6 scrollbar-hide bg-bg">
-        <SegmentedControl active={activeCategory} setActive={setActiveCategory} />
+        <SegmentedControl active={activeTab} setActive={setActiveTab} />
         
         <SearchBar />
         
-        {activeCategory === 'PYQs' && (
+        {activeTab === 'pyqs' && (
           <HorizontalTabs 
             tabs={['All', 'End Semester', 'Mid Semester', 'Internal1', 'Internal2', 'Other']} 
             activeTab={activeTab} 

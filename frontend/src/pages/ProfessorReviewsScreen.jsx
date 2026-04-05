@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
-const ProfessorReviewsScreen = ({ professor, onBack }) => {
-  const [reviews] = useState([
+const ProfessorReviewsScreen = ({ professor, onBack, currentUserRole, onDelete }) => {
+  const [reviews, setReviews] = useState([
     {
       id: 1,
       rating: 5,
@@ -11,7 +11,8 @@ const ProfessorReviewsScreen = ({ professor, onBack }) => {
       wouldTakeAgain: true,
       helpful: 156,
       unhelpful: 8,
-      date: '2 weeks ago'
+      date: '2 weeks ago',
+      userVote: null
     },
     {
       id: 2,
@@ -22,7 +23,8 @@ const ProfessorReviewsScreen = ({ professor, onBack }) => {
       wouldTakeAgain: true,
       helpful: 89,
       unhelpful: 5,
-      date: '1 month ago'
+      date: '1 month ago',
+      userVote: null
     },
     {
       id: 3,
@@ -61,9 +63,34 @@ const ProfessorReviewsScreen = ({ professor, onBack }) => {
 
   const [filterRating, setFilterRating] = useState(null);
 
+  const handleVote = (id, type) => {
+    setReviews(prev => prev.map(r => {
+      if (r.id === id) {
+        if (r.userVote === type) {
+          // undo vote
+          return {
+            ...r,
+            helpful: type === 'helpful' ? r.helpful - 1 : r.helpful,
+            unhelpful: type === 'unhelpful' ? r.unhelpful - 1 : r.unhelpful,
+            userVote: null
+          };
+        } else {
+          // new vote or change vote
+          return {
+            ...r,
+            helpful: type === 'helpful' ? r.helpful + 1 : (r.userVote === 'helpful' ? r.helpful - 1 : r.helpful),
+            unhelpful: type === 'unhelpful' ? r.unhelpful + 1 : (r.userVote === 'unhelpful' ? r.unhelpful - 1 : r.unhelpful),
+            userVote: type
+          };
+        }
+      }
+      return r;
+    }));
+  };
+
   const filteredReviews = filterRating ? reviews.filter(r => r.rating === filterRating) : reviews;
 
-  const averageRating = (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1);
+  const averageRating = (reviews.length > 0 ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length) : 0).toFixed(1);
 
   const renderStars = (rating) => {
     return (
@@ -101,6 +128,20 @@ const ProfessorReviewsScreen = ({ professor, onBack }) => {
         <div>
           <h1 className="text-lg font-bold text-text font-syne">{professor.name}</h1>
           <p className="text-xs text-text3">{professor.department}</p>
+        </div>
+        <div className="flex-1 flex justify-end">
+          {currentUserRole === 'admin' && (
+            <button 
+              onClick={() => {
+                if (window.confirm("Are you sure you want to delete this professor? This cannot be undone.")) {
+                  onDelete();
+                }
+              }} 
+              className="px-3 py-1 rounded-xl bg-red-500/10 text-red-500 text-xs font-semibold hover:bg-red-500/20"
+            >
+              Delete
+            </button>
+          )}
         </div>
       </div>
 
@@ -183,14 +224,14 @@ const ProfessorReviewsScreen = ({ professor, onBack }) => {
                 </div>
 
                 <div className="flex items-center gap-3 pt-2 border-t border-border">
-                  <button className="flex items-center gap-1 text-xs text-text3 hover:text-text transition-colors">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
+                  <button onClick={() => handleVote(review.id, 'helpful')} className={`flex items-center gap-1 text-xs transition-colors ${review.userVote === 'helpful' ? 'text-primary-mid' : 'text-text3 hover:text-text'}`}>
+                    <svg viewBox="0 0 24 24" fill={review.userVote === 'helpful' ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" width="14" height="14">
                       <polyline points="1 12 5 9 1 6"></polyline>
                     </svg>
                     <span>{review.helpful}</span>
                   </button>
-                  <button className="flex items-center gap-1 text-xs text-text3 hover:text-text transition-colors">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
+                  <button onClick={() => handleVote(review.id, 'unhelpful')} className={`flex items-center gap-1 text-xs transition-colors ${review.userVote === 'unhelpful' ? 'text-accent-red' : 'text-text3 hover:text-text'}`}>
+                    <svg viewBox="0 0 24 24" fill={review.userVote === 'unhelpful' ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" width="14" height="14">
                       <polyline points="23 12 19 15 23 18"></polyline>
                     </svg>
                     <span>{review.unhelpful}</span>

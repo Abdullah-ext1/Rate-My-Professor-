@@ -1,9 +1,9 @@
 import React, { useState, useRef } from 'react';
 import ConfirmModal from '../components/ConfirmModal';
 
-const PostScreen = ({ onNavClick }) => {
-  const [liked, setLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(47);
+const PostScreen = ({ onNavClick, postData }) => {
+  const [liked, setLiked] = useState(postData?.isLiked || false);
+  const [likeCount, setLikeCount] = useState(postData?.likes || 47);
   
   // Mock user role setup
   const currentUserRole = 'admin'; // Testing admin logic

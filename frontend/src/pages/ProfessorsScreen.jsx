@@ -114,6 +114,7 @@ const AttendanceCard = ({ status = 'safe', subject, prof, percent, attended, tot
       <div className="flex gap-1.5">
         <button onClick={() => onChange('attend')} className="flex-1 text-xs py-1.5 rounded-2xl bg-opacity-12 bg-accent-teal border border-opacity-30 border-accent-teal text-accent-teal font-medium cursor-pointer hover:bg-opacity-20 transition-colors">Attended</button>
         <button onClick={() => onChange('bunk')} className="flex-1 text-xs py-1.5 rounded-2xl bg-bg3 border border-border text-text3 font-medium cursor-pointer hover:bg-opacity-80 transition-colors">Bunked</button>
+        <button onClick={() => onChange('bulk')} className="flex-1 text-xs py-1.5 rounded-2xl bg-bg3 border border-border text-text3 font-medium cursor-pointer hover:bg-opacity-80 transition-colors">Edit Bulk</button>
       </div>
     </div>
   );
@@ -124,29 +125,110 @@ const AttendanceCard = ({ status = 'safe', subject, prof, percent, attended, tot
 const ProfessorsScreen = ({ onNavClick }) => {
   const [activeTab, setActiveTab] = useState('professors');
   const [selectedProfessor, setSelectedProfessor] = useState(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newProfessor, setNewProfessor] = useState({ name: '', subject: '', tags: '', department: '' });
 
-  const professors = [
-    { initials: "AP", name: "Prof. A. Patil", subject: "Data Structures", rating: 4.7, reviews: 29, tags: ['Best in dept', 'Fair marking'], department: "CS" },
-    { initials: "VM", name: "Prof. V. Mehta", subject: "Database Management", rating: 4.2, reviews: 38, tags: ['Lenient attendance', 'Clear teaching', 'Tough exams'], department: "CS" },
-    { initials: "SR", name: "Prof. S. Rao", subject: "Operating Systems", rating: 2.9, reviews: 51, tags: ['Very strict', 'Marks internally'], department: "CS" },
-  ];
+  const [professors, setProfessors] = useState([
+    { id: 1, initials: "AP", name: "Prof. A. Patil", subject: "Data Structures", rating: 4.7, reviews: 29, tags: ['Best in dept', 'Fair marking'], department: "CS" },
+    { id: 2, initials: "VM", name: "Prof. V. Mehta", subject: "Database Management", rating: 4.2, reviews: 38, tags: ['Lenient attendance', 'Clear teaching', 'Tough exams'], department: "CS" },
+    { id: 3, initials: "SR", name: "Prof. S. Rao", subject: "Operating Systems", rating: 2.9, reviews: 51, tags: ['Very strict', 'Marks internally'], department: "CS" },
+  ]);
+
+  const [attendances, setAttendances] = useState([
+    { id: 1, subject: "Data Structures", prof: "Prof. Patil", attended: 21, total: 25 },
+    { id: 2, subject: "Operating Systems", prof: "Prof. Rao", attended: 19, total: 25 },
+    { id: 3, subject: "Database Management", prof: "Prof. Mehta", attended: 15, total: 24 }
+  ]);
+
+  const [bulkEditModal, setBulkEditModal] = useState({ isOpen: false, id: null, attended: 0, total: 0 });
+
+  const handleAttendanceChange = (id, action) => {
+    if (action === 'bulk') {
+      const record = attendances.find(r => r.id === id);
+      if (record) setBulkEditModal({ isOpen: true, id, attended: record.attended, total: record.total });
+      return;
+    }
+
+    setAttendances(prev => prev.map(record => {
+      if (record.id === id) {
+        if (action === 'attend') {
+          return { ...record, attended: record.attended + 1, total: record.total + 1 };
+        } else if (action === 'bunk') {
+          return { ...record, total: record.total + 1 };
+        }
+      }
+      return record;
+    }));
+  };
+
+  const saveBulkEdit = () => {
+    if (bulkEditModal.id) {
+      setAttendances(prev => prev.map(record => {
+        if (record.id === bulkEditModal.id) {
+          return { ...record, attended: parseInt(bulkEditModal.attended) || 0, total: parseInt(bulkEditModal.total) || 0 };
+        }
+        return record;
+      }));
+    }
+    setBulkEditModal({ isOpen: false, id: null, attended: 0, total: 0 });
+  };
+
+  const handleAddProfessor = () => {
+    if (newProfessor.name) {
+      const nameParts = newProfessor.name.split(' ');
+      const initials = nameParts.length > 1 ? nameParts[0][0] + nameParts[nameParts.length - 1][0] : nameParts[0].substring(0, 2);
+      const tagsArray = newProfessor.tags.split(',').map(tag => tag.trim()).filter(tag => tag);
+      
+      const newProf = {
+        id: Date.now(),
+        initials: initials.toUpperCase(),
+        name: newProfessor.name,
+        subject: newProfessor.subject,
+        rating: 0,
+        reviews: 0,
+        tags: tagsArray,
+        department: newProfessor.department
+      };
+      
+      setProfessors([...professors, newProf]);
+      setShowAddModal(false);
+      setNewProfessor({ name: '', subject: '', tags: '', department: '' });
+    }
+  };
+
+  const handleRemoveProfessor = (id) => {
+    setProfessors(prev => prev.filter(p => p.id !== id));
+  };
 
   // Sort them by rating highest to lowest
   const sortedProfessors = [...professors].sort((a, b) => b.rating - a.rating);
 
+  const currentUserRole = 'admin';
+
   if (selectedProfessor) {
-    const prof = professors.find(p => p.name === selectedProfessor);
-    return <ProfessorReviewsScreen professor={prof} onBack={() => setSelectedProfessor(null)} />;
+    const prof = professors.find(p => p.id === selectedProfessor);
+    return <ProfessorReviewsScreen professor={prof} onBack={() => setSelectedProfessor(null)} currentUserRole={currentUserRole} onDelete={() => { handleRemoveProfessor(prof.id); setSelectedProfessor(null); }} />;
   }
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden bg-bg relative">
       <TopNav onNavClick={onNavClick} />
       <HorizontalTabs activeTab={activeTab} setActiveTab={setActiveTab} />
+      
       <ScrollArea>
         {activeTab === 'professors' ? (
           <>
-            <SearchBar />
+            <div className="flex justify-between items-center mb-2">
+              <SearchBar />
+              {(currentUserRole === 'admin' || currentUserRole === 'moderator') && (
+                <button 
+                  onClick={() => setShowAddModal(true)}
+                  className="bg-primary/10 text-primary-mid px-3 py-2 rounded-xl text-xs font-semibold hover:bg-primary/20 transition-colors ml-2 whitespace-nowrap"
+                >
+                  + Add Prof
+                </button>
+              )}
+            </div>
             {sortedProfessors.map((prof, idx) => (
               <ProfCard 
                 key={prof.name}
@@ -157,7 +239,7 @@ const ProfessorsScreen = ({ onNavClick }) => {
                 rating={prof.rating.toFixed(1)} 
                 reviews={prof.reviews} 
                 tags={prof.tags}
-                onReviewsClick={() => setSelectedProfessor(prof.name)}
+                onReviewsClick={() => setSelectedProfessor(prof.id)}
                 onRateClick={() => onNavClick('rate-professor')}
               />
             ))}
@@ -176,14 +258,105 @@ const ProfessorsScreen = ({ onNavClick }) => {
                 <div className="text-xs text-text3 mt-0.5">across all subjects this semester</div>
               </div>
             </div>
-            <AttendanceCard status="safe" subject="Data Structures" prof="Prof. Patil" percent={84} attended={21} total={25} canBunk="3" onChange={() => {}} />
-            <AttendanceCard status="warn" subject="Operating Systems" prof="Prof. Rao" percent={76} attended={19} total={25} canBunk="1" onChange={() => {}} />
-            <AttendanceCard status="danger" subject="Database Management" prof="Prof. Mehta" percent={63} attended={15} total={24} canBunk="Cannot bunk" onChange={() => {}} />
+            {attendances.map(record => {
+              const percent = record.total > 0 ? Math.round((record.attended / record.total) * 100) : 0;
+              let status = 'safe';
+              let canBunk = '0';
+              if (percent < 75) status = 'danger';
+              else if (percent < 80) status = 'warn';
+
+              if (percent >= 75) {
+                // calculate how many to bunk to hit 75
+                const bunkable = Math.floor((record.attended * 100) / 75) - record.total;
+                canBunk = bunkable > 0 ? bunkable.toString() : 'Cannot bunk';
+              } else {
+                canBunk = 'Cannot bunk';
+              }
+
+              return (
+                <AttendanceCard 
+                  key={record.id}
+                  status={status} 
+                  subject={record.subject} 
+                  prof={record.prof} 
+                  percent={percent} 
+                  attended={record.attended} 
+                  total={record.total} 
+                  canBunk={canBunk} 
+                  onChange={(action) => handleAttendanceChange(record.id, action)} 
+                />
+              )
+            })}
           </>
         )}
       </ScrollArea>
+
+      {/* Add Professor Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-bg border border-border rounded-3xl p-5 w-full max-w-sm">
+            <h2 className="text-lg font-bold text-text mb-4">Add New Professor</h2>
+            <div className="flex flex-col gap-3">
+              <input value={newProfessor.name} onChange={e => setNewProfessor({...newProfessor, name: e.target.value})} placeholder="Professor Name" className="bg-bg2 border border-border rounded-xl px-3 py-2 text-sm text-text" />
+              <input value={newProfessor.subject} onChange={e => setNewProfessor({...newProfessor, subject: e.target.value})} placeholder="Subject / Course" className="bg-bg2 border border-border rounded-xl px-3 py-2 text-sm text-text" />
+              <input value={newProfessor.department} onChange={e => setNewProfessor({...newProfessor, department: e.target.value})} placeholder="Department (e.g., CS)" className="bg-bg2 border border-border rounded-xl px-3 py-2 text-sm text-text" />
+              <input value={newProfessor.tags} onChange={e => setNewProfessor({...newProfessor, tags: e.target.value})} placeholder="Tags (comma separated)" className="bg-bg2 border border-border rounded-xl px-3 py-2 text-sm text-text" />
+            </div>
+            <div className="flex gap-3 mt-5">
+              <button onClick={() => setShowAddModal(false)} className="flex-1 py-2 rounded-xl bg-bg2 text-text3 font-medium hover:bg-bg3">Cancel</button>
+              <button onClick={handleAddProfessor} className="flex-1 py-2 rounded-xl bg-primary text-white font-medium hover:bg-primary-dark">Add Professor</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Edit Modal */}
+      {bulkEditModal.isOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-bg w-full max-w-sm rounded-[32px] overflow-hidden border border-border flex flex-col pt-6 pb-6 px-6 animate-pop-in">
+            <h2 className="text-text font-syne font-bold text-xl mb-4 text-center">Edit Attendance</h2>
+            
+            <div className="flex flex-col gap-3">
+              <div>
+                <label className="text-text3 text-xs mb-1 block">Lectures Attended</label>
+                <input 
+                  type="number" 
+                  value={bulkEditModal.attended}
+                  onChange={(e) => setBulkEditModal({...bulkEditModal, attended: e.target.value})}
+                  className="w-full bg-bg2 border border-border2 focus:border-primary px-3 py-2 rounded-xl text-text text-sm outline-none transition-colors"
+                />
+              </div>
+              
+              <div>
+                <label className="text-text3 text-xs mb-1 block">Total Lectures</label>
+                <input 
+                  type="number" 
+                  value={bulkEditModal.total}
+                  onChange={(e) => setBulkEditModal({...bulkEditModal, total: e.target.value})}
+                  className="w-full bg-bg2 border border-border2 focus:border-primary px-3 py-2 rounded-xl text-text text-sm outline-none transition-colors"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button 
+                onClick={() => setBulkEditModal({ isOpen: false, id: null, attended: 0, total: 0 })}
+                className="flex-1 py-3 text-sm font-semibold text-text border border-border rounded-2xl hover:bg-bg2 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={saveBulkEdit}
+                className="flex-1 py-3 text-sm font-semibold bg-primary text-white border border-primary rounded-2xl hover:bg-primary-dark transition-colors cursor-pointer"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
-
 export default ProfessorsScreen;

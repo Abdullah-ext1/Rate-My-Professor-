@@ -178,6 +178,12 @@ const PostCard = ({ id, handle, isLiked = false, likes, comments, onClick, onDel
     setLikeCount(liked ? likeCount - 1 : likeCount + 1);
   };
 
+  const handleCardClick = () => {
+    if (onClick && typeof onClick === 'function') {
+      onClick({ id, handle, isLiked: liked, likes: likeCount, comments, title, content, time, category });
+    }
+  };
+
   const handleDelete = (e) => {
     e.stopPropagation();
     if (onDelete && typeof onDelete === 'function') {
@@ -186,7 +192,7 @@ const PostCard = ({ id, handle, isLiked = false, likes, comments, onClick, onDel
   };
 
   return (
-    <div onClick={onClick} className="bg-bg2 border border-border rounded-3xl p-3 cursor-pointer hover:border-border2 transition-colors relative">
+    <div onClick={handleCardClick} className="bg-bg2 border border-border rounded-3xl p-3 cursor-pointer hover:border-border2 transition-colors relative">
       <div className="flex items-center gap-1.5 mb-2">
         <div className="w-6 h-6 rounded-full bg-opacity-15 bg-red-500 flex items-center justify-center text-xs flex-shrink-0">👻</div>
         <span className="text-xs font-medium text-text">{handle}</span>
