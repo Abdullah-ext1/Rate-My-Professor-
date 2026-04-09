@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import StatusBar from './components/StatusBar';
 import LoginScreen from './pages/LoginScreen';
 import FeedScreen from './pages/FeedScreen';
@@ -13,55 +14,40 @@ import NotificationScreen from './pages/NotificationScreen';
 import LeaderboardScreen from './pages/LeaderboardScreen';
 import RateProfessorScreen from './pages/RateProfessorScreen';
 
-function App() {
-  const [currentScreen, setCurrentScreen] = useState('login');
+// Main App Layout Component (handles navigation and footer)
+const AppLayout = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [selectedPost, setSelectedPost] = useState(null);
 
   const handleNavClick = (screen, data = null) => {
     if (screen === 'post' && data) {
       setSelectedPost(data);
     }
-    setCurrentScreen(screen);
+    navigate(`/${screen}`);
   };
 
-  const renderScreen = () => {
-    switch (currentScreen) {
-      case 'login':
-        return <div className="animate-fade-in"><LoginScreen onLogin={() => handleNavClick('feed')} /></div>;
-      case 'feed':
-        return <div className="animate-fade-in"><FeedScreen onNavClick={handleNavClick} /></div>;
-      case 'professors':
-        return <div className="animate-fade-in"><ProfessorsScreen onNavClick={handleNavClick} /></div>;
-      case 'announcement':
-        return <div className="animate-fade-in"><AnnouncementScreen onNavClick={handleNavClick} /></div>;
-      case 'pyqs':
-        return <div className="animate-fade-in"><PYQsScreen onNavClick={handleNavClick} /></div>;
-      case 'chat':
-        return <div className="animate-fade-in"><ChatScreen onNavClick={handleNavClick} /></div>;
-      case 'post':
-        return <div className="animate-fade-in"><PostScreen onNavClick={handleNavClick} postData={selectedPost} /></div>;
-      case 'notifications':
-        return <div className="animate-fade-in"><NotificationScreen onNavClick={handleNavClick} /></div>;
-      case 'leaderboard':
-        return <div className="animate-fade-in"><LeaderboardScreen onNavClick={handleNavClick} /></div>;
-      case 'rate-professor':
-        return <div className="animate-fade-in"><RateProfessorScreen onNavClick={handleNavClick} /></div>;
-      case 'moderator-dashboard':
-        return <div className="animate-fade-in"><ModeratorDashboard onNavClick={handleNavClick} /></div>;
-      case 'profile':
-        return <div className="animate-fade-in"><ProfileScreen onNavClick={handleNavClick} onBack={() => handleNavClick('chat')} currentUserRole="admin" /></div>;
-      case 'admin':
-        return <div className="animate-fade-in"><AdminScreen onNavClick={handleNavClick} onBack={() => handleNavClick('profile')} /></div>;
-      default:
-        return <div className="animate-fade-in"><FeedScreen onNavClick={handleNavClick} /></div>;
-    }
-  };
+  const currentScreen = location.pathname.slice(1) || 'feed';
 
   return (
     <div className="w-full h-screen bg-bg overflow-hidden flex flex-col">
       {/* Scrollable Content - bottom padding for footer */}
       <div className="flex-1 overflow-y-auto mb-16 w-full">
-        {renderScreen()}
+        <Routes>
+          <Route path="/login" element={<div className="animate-fade-in"><LoginScreen onLogin={() => navigate('/feed')} /></div>} />
+          <Route path="/feed" element={<div className="animate-fade-in"><FeedScreen onNavClick={handleNavClick} /></div>} />
+          <Route path="/professors" element={<div className="animate-fade-in"><ProfessorsScreen onNavClick={handleNavClick} /></div>} />
+          <Route path="/announcement" element={<div className="animate-fade-in"><AnnouncementScreen onNavClick={handleNavClick} /></div>} />
+          <Route path="/pyqs" element={<div className="animate-fade-in"><PYQsScreen onNavClick={handleNavClick} /></div>} />
+          <Route path="/chat" element={<div className="animate-fade-in"><ChatScreen onNavClick={handleNavClick} /></div>} />
+          <Route path="/post" element={<div className="animate-fade-in"><PostScreen onNavClick={handleNavClick} postData={selectedPost} /></div>} />
+          <Route path="/notifications" element={<div className="animate-fade-in"><NotificationScreen onNavClick={handleNavClick} /></div>} />
+          <Route path="/leaderboard" element={<div className="animate-fade-in"><LeaderboardScreen onNavClick={handleNavClick} /></div>} />
+          <Route path="/rate-professor" element={<div className="animate-fade-in"><RateProfessorScreen onNavClick={handleNavClick} /></div>} />
+          <Route path="/profile" element={<div className="animate-fade-in"><ProfileScreen onNavClick={handleNavClick} onBack={() => navigate('/chat')} currentUserRole="admin" /></div>} />
+          <Route path="/admin" element={<div className="animate-fade-in"><AdminScreen onNavClick={handleNavClick} onBack={() => navigate('/profile')} /></div>} />
+          <Route path="/" element={<div className="animate-fade-in"><FeedScreen onNavClick={handleNavClick} /></div>} />
+        </Routes>
       </div>
 
       {/* Fixed Footer - Only shown when not on login screen */}
@@ -71,7 +57,7 @@ function App() {
             {['feed', 'professors', 'announcement', 'vault', 'chat'].map(screen => (
               <button
                 key={screen}
-                onClick={() => handleNavClick(screen === 'vault' ? 'pyqs' : screen)}
+                onClick={() => navigate(`/${screen === 'vault' ? 'pyqs' : screen}`)}
                 className={`flex-1 flex flex-col items-center justify-center py-2 transition-colors relative group ${
                   (currentScreen === screen || (currentScreen === 'pyqs' && screen === 'vault'))
                     ? 'text-primary-mid'
@@ -116,6 +102,15 @@ function App() {
         </div>
       )}
     </div>
+  );
+};
+
+// Main App Component wraps everything in Router
+function App() {
+  return (
+    <Router>
+      <AppLayout />
+    </Router>
   );
 }
 
