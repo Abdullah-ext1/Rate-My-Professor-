@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { LeaderboardItemSkeleton } from '../components/Skeleton';
 
 const TopNav = ({ onNavClick }) => (
   <div className="fixed top-0 left-0 right-0 bg-bg px-4 py-2.5 flex items-center gap-3 flex-shrink-0 border-b border-border z-30">
@@ -41,12 +42,26 @@ const LeaderboardItem = ({ rank, initials, name, subject, rating, reviews, onRat
 };
 
 const LeaderboardScreen = ({ onNavClick }) => {
-  const [professors, setProfessors] = useState([
-    { id: 1, initials: 'AP', name: 'Prof. A. Patil', subject: 'Data Structures', rating: '4.7', reviews: '102' },
-    { id: 2, initials: 'VM', name: 'Prof. V. Mehta', subject: 'Database Management', rating: '4.2', reviews: '84' },
-    { id: 3, initials: 'NK', name: 'Prof. N. Kumar', subject: 'Theory of Computation', rating: '3.8', reviews: '65' },
-    { id: 4, initials: 'SR', name: 'Prof. S. Rao', subject: 'Operating Systems', rating: '2.9', reviews: '112' },
-  ]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [professors, setProfessors] = useState([]);
+
+  useEffect(() => {
+    const fetchLeaderboard = async () => {
+      setIsLoading(true);
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      setProfessors([
+        { id: 1, initials: 'AP', name: 'Prof. A. Patil', subject: 'Data Structures', rating: '4.7', reviews: '102' },
+        { id: 2, initials: 'VM', name: 'Prof. V. Mehta', subject: 'Database Management', rating: '4.2', reviews: '84' },
+        { id: 3, initials: 'NK', name: 'Prof. N. Kumar', subject: 'Theory of Computation', rating: '3.8', reviews: '65' },
+        { id: 4, initials: 'SR', name: 'Prof. S. Rao', subject: 'Operating Systems', rating: '2.9', reviews: '112' },
+      ]);
+      
+      setIsLoading(false);
+    };
+
+    fetchLeaderboard();
+  }, []);
 
   return (
     <div className="flex flex-col h-full bg-bg">
@@ -59,21 +74,32 @@ const LeaderboardScreen = ({ onNavClick }) => {
         </div>
 
         <div className="flex flex-col">
-          {professors.sort((a, b) => parseFloat(b.rating) - parseFloat(a.rating)).map((prof, index) => (
-            <LeaderboardItem 
-              key={prof.id} 
-              rank={index + 1}
-              initials={prof.initials} 
-              name={prof.name} 
-              subject={prof.subject} 
-              rating={prof.rating} 
-              reviews={prof.reviews} 
-              onRateClick={() => onNavClick('professors')}
-            />
-          ))}
-          <div className="text-center text-xs text-text3 py-4">
-            Rankings are updated daily based on student feedback.
-          </div>
+          {isLoading ? (
+            <>
+              <LeaderboardItemSkeleton />
+              <LeaderboardItemSkeleton />
+              <LeaderboardItemSkeleton />
+              <LeaderboardItemSkeleton />
+            </>
+          ) : (
+            professors.sort((a, b) => parseFloat(b.rating) - parseFloat(a.rating)).map((prof, index) => (
+              <LeaderboardItem 
+                key={prof.id} 
+                rank={index + 1}
+                initials={prof.initials} 
+                name={prof.name} 
+                subject={prof.subject} 
+                rating={prof.rating} 
+                reviews={prof.reviews} 
+                onRateClick={() => onNavClick('professors')}
+              />
+            ))
+          )}
+          {!isLoading && (
+            <div className="text-center text-xs text-text3 py-4">
+              Rankings are updated daily based on student feedback.
+            </div>
+          )}
         </div>
       </div>
     </div>

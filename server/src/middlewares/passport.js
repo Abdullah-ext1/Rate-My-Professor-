@@ -11,6 +11,8 @@ export default function configurePassport() {
     try {
       const existingUser = await User.findOne({ googleId: profile.id });
       if(existingUser){
+        existingUser.avatar = profile.photos[0].value;
+        await existingUser.save();
         return done(null, existingUser);
       }
 

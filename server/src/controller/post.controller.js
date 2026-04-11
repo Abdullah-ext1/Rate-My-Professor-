@@ -41,7 +41,7 @@ const getPosts = asyncHandler(async( req, res ) => {
   const skip = (page - 1) * limit // calculate the number of posts to skip based on the current page and limit
 
   const filter = req.user.role === 'admin' ? {} : { college: req.user.college }
-  const posts = await Post.find(filter).skip(skip).limit(limit)
+  const posts = await Post.find(filter).populate('owner', 'name').skip(skip).limit(limit)
 
   return res
   .status(200)
@@ -119,7 +119,7 @@ const getPostById = asyncHandler(async (req, res) => {
   
   const post = await Post.findByIdAndUpdate(postId, {
     $inc: {views: 1},
-  }, {new: true})
+  }, {new: true}).populate("owner", "name")
 
   return res
   .status(201)

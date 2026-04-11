@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken";
 import { verifyJwt } from "../middlewares/verifyJwt.js"
 import { verifyAdmin } from "../middlewares/verifyAdmin.js"
 import { verifyModerator } from "../middlewares/verifyModerator.js"
-import { bannedUser, changeAccountDetails, getCurrentUser, logOutUser, onboardingAuth, suspendUser } from "../controller/auth.controller.js";
+import { bannedUser, changeAccountDetails, getCurrentUser, logOutUser, onboardingAuth, suspendUser, checkUsernameAvailability } from "../controller/auth.controller.js";
 
 const router = Router();
 
@@ -12,19 +12,20 @@ router.get("/google", passport.authenticate("google", {
   scope: ["profile", "email"]
 }))
 
-router.get("/google/callback", passport.authenticate("google", { session: false }),
+router.get("/google/callback", passport.authenticate("google", {session: false}),
   (req, res) => {
     const token = jwt.sign(
-      { id: req.user.id },
+      {id: req.user.id},
       process.env.JWT_SECRET,
-      { expiresIn: "7d" },
+      { expiresIn: "7d"},
     )
-    res.cookie("accessToken", token, { httpOnly: true })
-    res.redirect("http://localhost:5173/feed")
+    res.cookie("accessToken", token,{httpOnly: true})
+    res.redirect("http://localhost:5173/")
   },
 )
 
 router.get("/me", verifyJwt, getCurrentUser)
+router.get("/check-username", checkUsernameAvailability)
 router.put("/onboarding", verifyJwt, onboardingAuth)
 router.put("/profile", verifyJwt, changeAccountDetails)
 router.post("/logout", verifyJwt, logOutUser)

@@ -1,5 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ProfessorReviewsScreen from './ProfessorReviewsScreen';
+import { ProfCardSkeleton } from '../components/Skeleton';
+import ProfCard from '../components/ProfCard';
+import AttendanceCard from '../components/AttendanceCard';
 
 const TopNav = ({ onNavClick }) => (
   <div className="fixed top-0 left-0 right-0 bg-bg px-4 py-2.5 flex items-center justify-between flex-shrink-0 border-b border-border z-30">
@@ -54,72 +57,6 @@ const SearchBar = () => (
   </div>
 );
 
-const ProfCard = ({ initials, name, subject, rating, reviews, tags, rank, onRateClick, onReviewsClick }) => (
-  <div onClick={onReviewsClick} className="bg-bg2 border border-border rounded-3xl p-3.5 mb-3 cursor-pointer hover:border-border2 transition-colors relative">
-    <div className="absolute -top-2 -right-2 w-7 h-7 bg-bg3 border border-border rounded-full flex justify-center items-center font-bold font-syne text-sm shadow-sm"
-         style={{ color: rank === 1 ? '#FBBF24' : rank === 2 ? '#9CA3AF' : rank === 3 ? '#D97706' : '#9B99B0' }}>
-      #{rank}
-    </div>
-    <div className="flex items-center gap-2.5 mb-2.5">
-      <div className="w-9 h-9 rounded-2.5 bg-opacity-20 bg-primary flex items-center justify-center text-xs font-semibold text-primary-mid flex-shrink-0 font-syne">{initials}</div>
-      <div className="flex-1">
-        <div className="text-sm font-semibold text-text font-syne">{name}</div>
-        <div className="text-xs text-text3 mt-0.5">{subject}</div>
-      </div>
-      <div className="text-right mr-4">
-        <div className="text-xl font-bold text-accent-teal font-syne">{rating}</div>
-        <div className="text-xs text-text3 mt-0.5">{reviews} reviews</div>
-      </div>
-    </div>
-    <div className="flex gap-1.5 flex-wrap mb-2">
-      {tags.map(tag => (
-        <span key={tag} className="text-xs px-2 py-0.5 rounded-2xl border border-opacity-20 border-accent-teal bg-opacity-10 bg-accent-teal text-accent-teal font-medium">
-          {tag}
-        </span>
-      ))}
-    </div>
-    <div className="text-xs text-text2 leading-relaxed italic px-2.5 py-2 bg-bg3 rounded-2xl mb-2">"Missed 12 classes, still got signed. Study last 5 years PYQs."</div>
-    <button onClick={(e) => { e.stopPropagation(); onRateClick(); }} className="w-full mt-1 bg-border text-text font-semibold rounded-2xl py-2 text-xs hover:bg-border2 transition-colors cursor-pointer border border-transparent">
-      Rate Professor
-    </button>
-  </div>
-);
-
-const AttendanceCard = ({ status = 'safe', subject, prof, percent, attended, total, canBunk, onChange }) => {
-  const statusStyles = {
-    safe: { border: 'border-l-4 border-l-accent-teal', percentColor: 'text-accent-teal', barColor: 'bg-accent-teal' },
-    warn: { border: 'border-l-4 border-l-accent-amber', percentColor: 'text-accent-amber', barColor: 'bg-accent-amber' },
-    danger: { border: 'border-l-4 border-l-accent-red', percentColor: 'text-accent-red', barColor: 'bg-accent-red' },
-  };
-  const style = statusStyles[status];
-
-  return (
-    <div className={`bg-bg2 border border-border rounded-3xl p-3 ${style.border}`}>
-      <div className="flex items-start justify-between mb-2">
-        <div>
-          <div className="text-sm font-medium text-text">{subject}</div>
-          <div className="text-xs text-text3 mt-0.5">{prof}</div>
-        </div>
-        <div className={`text-2xl font-bold ${style.percentColor} font-syne`}>{percent}%</div>
-      </div>
-      <div className="h-1 bg-bg3 rounded overflow-hidden mb-1.75">
-        <div className={`h-full ${style.barColor}`} style={{ width: `${percent}%` }}></div>
-      </div>
-      <div className="flex justify-between text-xs text-text3 mb-2.5">
-        <span>{attended} / {total} classes</span>
-        <span className={status === 'danger' ? 'text-accent-red font-medium' : status === 'warn' ? 'text-accent-amber font-medium' : 'text-accent-teal font-medium'}>
-          {canBunk === 'Cannot bunk' ? canBunk : `Can bunk ${canBunk} more`}
-        </span>
-      </div>
-      <div className="flex gap-1.5">
-        <button onClick={() => onChange('attend')} className="flex-1 text-xs py-1.5 rounded-2xl bg-opacity-12 bg-accent-teal border border-opacity-30 border-accent-teal text-accent-teal font-medium cursor-pointer hover:bg-opacity-20 transition-colors">Attended</button>
-        <button onClick={() => onChange('bunk')} className="flex-1 text-xs py-1.5 rounded-2xl bg-bg3 border border-border text-text3 font-medium cursor-pointer hover:bg-opacity-80 transition-colors">Bunked</button>
-        <button onClick={() => onChange('bulk')} className="flex-1 text-xs py-1.5 rounded-2xl bg-bg3 border border-border text-text3 font-medium cursor-pointer hover:bg-opacity-80 transition-colors">Edit Bulk</button>
-      </div>
-    </div>
-  );
-};
-
 
 
 const ProfessorsScreen = ({ onNavClick }) => {
@@ -127,18 +64,33 @@ const ProfessorsScreen = ({ onNavClick }) => {
   const [selectedProfessor, setSelectedProfessor] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newProfessor, setNewProfessor] = useState({ name: '', subject: '', tags: '', department: '' });
+  const [isLoading, setIsLoading] = useState(true);
 
-  const [professors, setProfessors] = useState([
-    { id: 1, initials: "AP", name: "Prof. A. Patil", subject: "Data Structures", rating: 4.7, reviews: 29, tags: ['Best in dept', 'Fair marking'], department: "CS" },
-    { id: 2, initials: "VM", name: "Prof. V. Mehta", subject: "Database Management", rating: 4.2, reviews: 38, tags: ['Lenient attendance', 'Clear teaching', 'Tough exams'], department: "CS" },
-    { id: 3, initials: "SR", name: "Prof. S. Rao", subject: "Operating Systems", rating: 2.9, reviews: 51, tags: ['Very strict', 'Marks internally'], department: "CS" },
-  ]);
+  const [professors, setProfessors] = useState([]);
+  const [attendances, setAttendances] = useState([]);
 
-  const [attendances, setAttendances] = useState([
-    { id: 1, subject: "Data Structures", prof: "Prof. Patil", attended: 21, total: 25 },
-    { id: 2, subject: "Operating Systems", prof: "Prof. Rao", attended: 19, total: 25 },
-    { id: 3, subject: "Database Management", prof: "Prof. Mehta", attended: 15, total: 24 }
-  ]);
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      setProfessors([
+        { id: 1, initials: "AP", name: "Prof. A. Patil", subject: "Data Structures", rating: 4.7, reviews: 29, tags: ['Best in dept', 'Fair marking'], department: "CS" },
+        { id: 2, initials: "VM", name: "Prof. V. Mehta", subject: "Database Management", rating: 4.2, reviews: 38, tags: ['Lenient attendance', 'Clear teaching', 'Tough exams'], department: "CS" },
+        { id: 3, initials: "SR", name: "Prof. S. Rao", subject: "Operating Systems", rating: 2.9, reviews: 51, tags: ['Very strict', 'Marks internally'], department: "CS" },
+      ]);
+      
+      setAttendances([
+        { id: 1, subject: "Data Structures", prof: "Prof. Patil", attended: 21, total: 25 },
+        { id: 2, subject: "Operating Systems", prof: "Prof. Rao", attended: 19, total: 25 },
+        { id: 3, subject: "Database Management", prof: "Prof. Mehta", attended: 15, total: 24 }
+      ]);
+      
+      setIsLoading(false);
+    };
+
+    fetchData();
+  }, []);
 
   const [bulkEditModal, setBulkEditModal] = useState({ isOpen: false, id: null, attended: 0, total: 0 });
 
@@ -229,20 +181,28 @@ const ProfessorsScreen = ({ onNavClick }) => {
                 </button>
               )}
             </div>
-            {sortedProfessors.map((prof, idx) => (
-              <ProfCard 
-                key={prof.name}
-                rank={idx + 1}
-                initials={prof.initials} 
-                name={prof.name} 
-                subject={prof.subject} 
-                rating={prof.rating.toFixed(1)} 
-                reviews={prof.reviews} 
-                tags={prof.tags}
-                onReviewsClick={() => setSelectedProfessor(prof.id)}
-                onRateClick={() => onNavClick('rate-professor')}
-              />
-            ))}
+            {isLoading ? (
+              <>
+                <ProfCardSkeleton />
+                <ProfCardSkeleton />
+                <ProfCardSkeleton />
+              </>
+            ) : (
+              sortedProfessors.map((prof, idx) => (
+                <ProfCard 
+                  key={prof.name}
+                  rank={idx + 1}
+                  initials={prof.initials} 
+                  name={prof.name} 
+                  subject={prof.subject} 
+                  rating={prof.rating.toFixed(1)} 
+                  reviews={prof.reviews} 
+                  tags={prof.tags}
+                  onReviewsClick={() => setSelectedProfessor(prof.id)}
+                  onRateClick={() => onNavClick('rate-professor')}
+                />
+              ))
+            )}
           </>
         ) : (
           <>
@@ -258,35 +218,43 @@ const ProfessorsScreen = ({ onNavClick }) => {
                 <div className="text-xs text-text3 mt-0.5">across all subjects this semester</div>
               </div>
             </div>
-            {attendances.map(record => {
-              const percent = record.total > 0 ? Math.round((record.attended / record.total) * 100) : 0;
-              let status = 'safe';
-              let canBunk = '0';
-              if (percent < 75) status = 'danger';
-              else if (percent < 80) status = 'warn';
+            {isLoading ? (
+              <>
+                <ProfCardSkeleton />
+                <ProfCardSkeleton />
+                <ProfCardSkeleton />
+              </>
+            ) : (
+              attendances.map(record => {
+                const percent = record.total > 0 ? Math.round((record.attended / record.total) * 100) : 0;
+                let status = 'safe';
+                let canBunk = '0';
+                if (percent < 75) status = 'danger';
+                else if (percent < 80) status = 'warn';
 
-              if (percent >= 75) {
-                // calculate how many to bunk to hit 75
-                const bunkable = Math.floor((record.attended * 100) / 75) - record.total;
-                canBunk = bunkable > 0 ? bunkable.toString() : 'Cannot bunk';
-              } else {
-                canBunk = 'Cannot bunk';
-              }
+                if (percent >= 75) {
+                  // calculate how many to bunk to hit 75
+                  const bunkable = Math.floor((record.attended * 100) / 75) - record.total;
+                  canBunk = bunkable > 0 ? bunkable.toString() : 'Cannot bunk';
+                } else {
+                  canBunk = 'Cannot bunk';
+                }
 
-              return (
-                <AttendanceCard 
-                  key={record.id}
-                  status={status} 
-                  subject={record.subject} 
-                  prof={record.prof} 
-                  percent={percent} 
-                  attended={record.attended} 
-                  total={record.total} 
-                  canBunk={canBunk} 
-                  onChange={(action) => handleAttendanceChange(record.id, action)} 
-                />
-              )
-            })}
+                return (
+                  <AttendanceCard 
+                    key={record.id}
+                    status={status} 
+                    subject={record.subject} 
+                    prof={record.prof} 
+                    percent={percent} 
+                    attended={record.attended} 
+                    total={record.total} 
+                    canBunk={canBunk} 
+                    onChange={(action) => handleAttendanceChange(record.id, action)} 
+                  />
+                )
+              })
+            )}
           </>
         )}
       </ScrollArea>

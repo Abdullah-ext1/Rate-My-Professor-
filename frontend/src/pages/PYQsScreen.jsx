@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from "react";
+import { PYQSkeleton } from "../components/Skeleton";
 
 const TopNav = ({ onNavClick }) => (
   <div className="fixed top-0 left-0 right-0 bg-bg px-4 py-2.5 flex items-center justify-between flex-shrink-0 border-b border-border z-30">
@@ -24,17 +25,20 @@ const TopNav = ({ onNavClick }) => (
 
 const SegmentedControl = ({ active, setActive }) => (
   <div className="flex bg-bg2 p-1.5 rounded-2xl mb-4 border border-border">
-    {['PYQs', 'Notes'].map(opt => (
-      <button
-        key={opt}
-        onClick={() => setActive(opt)}
-        className={`flex-1 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
-          active === opt ? 'bg-primary text-white shadow-md' : 'text-text3 hover:text-text'
-        }`}
-      >
-        {opt}
-      </button>
-    ))}
+    {['PYQs', 'Notes'].map(opt => {
+      const id = opt.toLowerCase();
+      return (
+        <button
+          key={opt}
+          onClick={() => setActive(id)}
+          className={`flex-1 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
+            active === id ? 'bg-primary text-white shadow-md' : 'text-text3 hover:text-text'
+          }`}
+        >
+          {opt}
+        </button>
+      );
+    })}
   </div>
 );
 
@@ -227,6 +231,16 @@ const PYQsScreen = ({ onNavClick }) => {
   const [activeTab, setActiveTab] = useState('pyqs');
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Simulate API fetch delay
+    setIsLoading(true);
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [activeTab]); // Trigger loading when tab changes
 
   const handleDownload = (link) => {
     // Navigate to Google Drive or download link
@@ -270,15 +284,28 @@ const PYQsScreen = ({ onNavClick }) => {
         )}
 
         <div className="mt-2">
-          {filteredItems.map(item => (
-            <PYQCard 
-              key={item.id}
-              subjectName={item.subjectName}
-              year={item.year}
-              examType={item.examType}
-              isApproved={item.isApproved}
-            />
-          ))}
+          {isLoading ? (
+            // Skeleton Loading State
+            <>
+              <PYQSkeleton />
+              <PYQSkeleton />
+              <PYQSkeleton />
+              <PYQSkeleton />
+            </>
+          ) : (
+            <div className="mb-6">
+              {filteredItems.map(item => (
+                <PYQCard
+                  key={item.id}
+                  subjectName={item.subjectName}
+                  year={item.year}
+                  examType={item.examType}
+                  isApproved={item.isApproved}
+                />
+              ))}
+            </div>
+          )}
+
           {filteredItems.length === 0 && (
             <div className="text-center text-text3 text-sm py-10">
               No files found.

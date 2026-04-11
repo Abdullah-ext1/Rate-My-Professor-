@@ -1,30 +1,33 @@
-import { createContext, useState, useEffect } from 'react'
-import axios from 'axios'
+import { createContext, useState, useEffect, useContext } from 'react'
+import api from "./api.js"
 
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null); 
-  const [isAuthenticated, setIsAuthenticated] = useState();
+  const [loading, setLoading] = useState(true)
 
-  async () => {
-    useEffect(() => {
+  const fetchUser = async () => {
     try {
-      const response = axios.get("http://localhost:9000/api/auth/me", {withCredentials: true})
-      console.log(response.data)
-      setUser(response.data.data)
-      setUser({ name: username });
-      setIsAuthenticated(true);
+      setLoading(true);
+      const response = await api.get("/auth/me", { withCredentials: true });
+      setUser(response.data.data);
     } catch (error) {
-      console.log("Error while loggingIn")
+      setUser(null);
+    } finally {
+      setLoading(false);
     }
-    }, [])
-  }
-  
+  };
+
+  useEffect(() => {
+    fetchUser();
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, refetchUser: fetchUser }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
+export const useAuth = () => useContext(AuthContext);

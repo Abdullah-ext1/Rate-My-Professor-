@@ -1,4 +1,4 @@
-const LoginScreen = ({ onLogin }) => (
+const LoginScreen = ({ }) => (
   <div className="flex-1 bg-bg flex flex-col items-center justify-center p-8 text-center">
     <div className="text-5xl font-bold mb-2">
       campus<span className="text-primary-mid">.</span>
@@ -9,7 +9,8 @@ const LoginScreen = ({ onLogin }) => (
       share freely — no names ever.
     </p>
     <button
-      onClick={onLogin}
+      // So we use window.location.href is because we have to change the page and redirect for the login and thats why we dont call the backend for it 
+      onClick={() => window.location.href=`${import.meta.env.VITE_BACKEND_URL}/auth/google`}
       className="w-full py-3.5 bg-white text-gray-900 rounded-lg font-medium text-sm flex items-center justify-center gap-2.5 mb-3"
     >
       <svg width="16" height="16" viewBox="0 0 24 24">

@@ -72,10 +72,24 @@ const deleteCollege = asyncHandler(async (req, res) => {
   )
 })
 
+const getAllCollege = asyncHandler(async (req, res) => {
+  const college = await College.find()
+
+  if(!college){
+    throw new ApiError(401, "Couldn't fetch any college")
+  }
+
+  return res
+  .status(201)
+  .json(
+    new ApiResponse(201, college, "Colleges were fetched successfully")
+  )
+})
 
 
 export {
   addCollege,
   updateCollegeDetails,
-  deleteCollege
+  deleteCollege,
+  getAllCollege
 }

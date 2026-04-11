@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { NotificationSkeleton } from '../components/Skeleton';
 
 const TopNav = ({ onNavClick }) => (
   <div className="fixed top-0 left-0 right-0 bg-bg px-4 py-2.5 flex items-center gap-3 flex-shrink-0 border-b border-border z-30">
@@ -47,44 +48,70 @@ const NotificationItem = ({ type, user, content, time, isRead }) => {
 };
 
 const NotificationScreen = ({ onNavClick }) => {
-  const notifications = [
-    {
-      id: 1,
-      type: 'like',
-      user: 'Anonymous panda',
-      content: 'I have 61% attendance in OS and the exam is in...',
-      time: '14m ago',
-      isRead: false
-    },
-    {
-      id: 2,
-      type: 'comment',
-      user: 'Anonymous butterfly',
-      content: 'Library Wifi. The wifi in the library has been...',
-      time: '2h ago',
-      isRead: false
-    },
-    {
-      id: 3,
-      type: 'like',
-      user: 'Anonymous lion',
-      content: 'Does anyone have the notes for yesterday\'s DBMS lecture?',
-      time: '5h ago',
-      isRead: true
-    }
-  ];
+  const [isLoading, setIsLoading] = useState(true);
+  const [notifications, setNotifications] = useState([]);
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      setIsLoading(true);
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      setNotifications([
+        {
+          id: 1,
+          type: 'like',
+          user: 'Anonymous panda',
+          content: 'I have 61% attendance in OS and the exam is in...',
+          time: '14m ago',
+          isRead: false
+        },
+        {
+          id: 2,
+          type: 'comment',
+          user: 'Anonymous butterfly',
+          content: 'Library Wifi. The wifi in the library has been...',
+          time: '2h ago',
+          isRead: false
+        },
+        {
+          id: 3,
+          type: 'like',
+          user: 'Anonymous lion',
+          content: 'Does anyone have the notes for yesterday\'s DBMS lecture?',
+          time: '5h ago',
+          isRead: true
+        }
+      ]);
+      
+      setIsLoading(false);
+    };
+
+    fetchNotifications();
+  }, []);
 
   return (
     <div className="flex flex-col h-full bg-bg">
       <TopNav onNavClick={onNavClick} />
       <div className="flex-1 overflow-y-auto pt-[60px] pb-6">
         <div className="flex flex-col">
-          {notifications.map(notif => (
-            <NotificationItem key={notif.id} {...notif} />
-          ))}
-          <div className="text-center text-xs text-text3 py-6">
-            No more notifications
-          </div>
+          {isLoading ? (
+            <>
+              <NotificationSkeleton />
+              <NotificationSkeleton />
+              <NotificationSkeleton />
+              <NotificationSkeleton />
+              <NotificationSkeleton />
+            </>
+          ) : (
+            notifications.map(notif => (
+              <NotificationItem key={notif.id} {...notif} />
+            ))
+          )}
+          {!isLoading && (
+            <div className="text-center text-xs text-text3 py-6">
+              No more notifications
+            </div>
+          )}
         </div>
       </div>
     </div>

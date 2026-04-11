@@ -1,6 +1,9 @@
-import React from 'react';
+import { useAuth } from "../context/AuthContext";
+import api from "../context/api.js"
 
 const ProfileScreen = ({ onNavClick, currentUserRole }) => {
+  
+  const {user} = useAuth();
   return (
     <div className="flex flex-col flex-1 overflow-hidden bg-bg relative min-h-screen">
       {/* Top Navbar */}
@@ -17,7 +20,7 @@ const ProfileScreen = ({ onNavClick, currentUserRole }) => {
         {/* Profile Header */}
         <div className="flex flex-col items-center justify-center py-6 border-b border-border mb-6">
           <div className="w-24 h-24 rounded-full bg-primary-mid/10 border-4 border-bg2 outline outline-2 outline-primary-mid/30 flex items-center justify-center mb-4 shadow-lg overflow-hidden relative group cursor-pointer">
-            <span className="text-3xl font-bold text-primary-mid font-syne">ME</span>
+            <img src={user?.avatar} className="w-full h-full object-cover rounded-full" />
             <div className="absolute inset-0 bg-black/40 hidden group-hover:flex items-center justify-center transition-all">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
@@ -25,15 +28,15 @@ const ProfileScreen = ({ onNavClick, currentUserRole }) => {
               </svg>
             </div>
           </div>
-          <h2 className="text-xl font-bold text-text mb-1">Abdullah</h2>
-          <p className="text-sm text-text3 font-medium">@abdullah_x1</p>
+          <h2 className="text-xl font-bold text-text mb-1">{user?.name}</h2>
+          <p className="text-sm text-text3 font-medium">{user?.username}</p>
           
           <div className="flex gap-2 mt-3">
             <span className="px-3 py-1 rounded-full bg-accent-teal/10 text-accent-teal border border-accent-teal/20 text-xs font-semibold uppercase tracking-wide">
-              Admin
+              {user?.role}
             </span>
             <span className="px-3 py-1 rounded-full bg-primary-mid/10 text-primary-mid border border-primary-mid/20 text-xs font-semibold uppercase tracking-wide">
-              Rizvi College
+              {user?.college?.name}
             </span>
           </div>
         </div>
@@ -76,7 +79,7 @@ const ProfileScreen = ({ onNavClick, currentUserRole }) => {
             </button>
           ))}
 
-          {currentUserRole === 'admin' && (
+          {user?.role === 'admin' && (
             <button 
               onClick={() => onNavClick('admin')}
               className="w-full flex items-center justify-between p-4 hover:bg-hover active:bg-divider transition-colors"
@@ -93,7 +96,13 @@ const ProfileScreen = ({ onNavClick, currentUserRole }) => {
             </button>
           )}
 
-          <button className="flex items-center gap-3 p-4 rounded-2xl hover:bg-red-500/10 transition-colors text-red-500 group cursor-pointer w-full text-left mt-2">
+          <button 
+            onClick={async () => {
+              await api.post('/auth/logout');
+              window.location.href = '/login';
+            }}
+
+            className="flex items-center gap-3 p-4 rounded-2xl hover:bg-red-500/10 transition-colors text-red-500 group cursor-pointer w-full text-left mt-2">
             <div className="w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center group-hover:bg-red-500/20 transition-colors">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>

@@ -13,11 +13,29 @@ const onboardingAuth = asyncHandler( async(req, res) => {
   // If match → update user with college, department, year
   // Return updated user
 
-  const {college, department, year} = req.body;
+  // if user admin then he be livin yk what i mean
+  const {college, department, year, username} = req.body;
+  const isAdmin = req.user.role === 'admin';
+  
+  if (isAdmin) {
+    if (!username) {
+      throw new ApiError(401, "Username is necessary")
+    }
+    const user = await User.findByIdAndUpdate(
+      req.user?.id,
+      { $set: { username } },
+      { new: true }
+    )
+    return res.status(201).json(
+      new ApiResponse("200", user, "Admin setup completed successfully")
+    )
+  }
+
+  
 
   const domain = req.user.email.split("@")[1]
 
-  if(!college || !department || !year){
+  if(!college || !department || !year || !username){
     throw new ApiError(401, "All Fields are necessary")
   }
 
@@ -33,7 +51,8 @@ const onboardingAuth = asyncHandler( async(req, res) => {
       $set:{
         college,
         department,
-        year
+        year,
+        username
       }
   },
   {new: true})
@@ -70,10 +89,12 @@ const changeAccountDetails = asyncHandler(async (req, res) => {
 
 const getCurrentUser = asyncHandler(async (req, res) => {
 
+  const user = await User.findById(req.user.id).populate('college', 'name')
+
   return res
   .status(201)
   .json(
-    new ApiResponse(201, req.user, "User has been fetched successfully")
+    new ApiResponse(201, user, "User has been fetched successfully")
   )
 })
 
@@ -132,11 +153,28 @@ const suspendUser = asyncHandler(async(req, res) => {
   )
 })
 
+const checkUsernameAvailability = asyncHandler(async (req, res) => {
+  const { username } = req.query;
+
+  if (!username || username.trim().length === 0) {
+    throw new ApiError(400, "Username is required");
+  }
+
+  const existingUser = await User.findOne({ username: username.trim().toLowerCase() });
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, { exists: !!existingUser }, "Username check completed")
+    );
+});
+
 export {
   onboardingAuth,
   changeAccountDetails,
   getCurrentUser,
   logOutUser,
   bannedUser,
-  suspendUser
+  suspendUser,
+  checkUsernameAvailability
 }

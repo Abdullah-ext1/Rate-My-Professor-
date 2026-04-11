@@ -23,6 +23,10 @@ const createAComment = asyncHandler(async(req, res) => {
     post: postId,
     content,
   })
+
+  await Post.findByIdAndUpdate(postId, {
+    $push: { comments: createComment._id }
+  })
   
   return res
   .status(201)
@@ -59,11 +63,11 @@ const replyToAComment = asyncHandler(async(req, res) => {
   )
 
   const createdNotification = await createNotification({
-    userId: comment.user,
-    type: "comment",
-    commentId: comment.id,
-    content: "Somebody replied to your comment"
-  })
+  userId: comment.user,
+  type: "comment",
+  commentId: comment.id,
+  content: "Somebody replied to your comment"
+});
 
   return res
   .status(201)
@@ -93,6 +97,10 @@ const deleteAComment = asyncHandler(async(req, res) => {
     {new: true}
   )
 
+  await Post.findByIdAndUpdate(deletedThComment.post, {
+    $pull: { comments: commentId }
+  })
+
   return res
   .status(201)
   .json(
@@ -110,50 +118,66 @@ const getAllCommentsOfAPost = asyncHandler(async (req, res) => {
 
   // populate takes the field name as first argument and selected fields as second argument. But you're passing "name" and "avatar" as two separate arguments.
 
-  const comment = await Comment.find({post: postId}).populate("user", "name avatar").populate("replies").populate("commentLike")
+  const comments = await Comment.find({post: postId})
+    .populate("user", "name avatar")
+    .populate({
+      path: "replies",
+      populate: { path: "user", select: "name avatar" }
+    })
+
+  // Filter out comments that are actually replies to other comments
+  const replyIds = new Set();
+  comments.forEach(comment => {
+    if (comment.replies) {
+      comment.replies.forEach(reply => {
+        if (reply && reply._id) {
+          replyIds.add(reply._id.toString());
+        }
+      });
+    }
+  });
+
+  const topLevelComments = comments.filter(comment => !replyIds.has(comment._id.toString()));
 
   return res
   .status(201)
   .json(
-    new ApiResponse(201, comment, "All comments fetched successfully")
+    new ApiResponse(201, topLevelComments, "All comments fetched successfully")
   )
 })
 
-const likeAComment = asyncHandler(async(req, res) => {
-  const commentId = req.params.id
-  const comment = await Comment.findById(commentId)
+const likeAComment = asyncHandler(async (req, res) => {
+  const commentId = req.params.id;
+  const comment = await Comment.findById(commentId);
 
-  if(!comment){
-    throw new ApiError(400, "Comment with that Id dosen't exists")
+  if (!comment) {
+    throw new ApiError(400, "Comment with that Id doesn't exist");
   }
 
-  const alreadyLiked = comment.commentLike.includes(req.user.id)
+  const userId = req.user.id;
+
+  const alreadyLiked = comment.commentLike.some(
+    (id) => id.toString() === userId.toString()
+  );
 
   const updateLike = await Comment.findByIdAndUpdate(
     commentId,
-    alreadyLiked? 
-      { 
-        $pull: {commentLike: req.user.id}
-      } : 
-      {
-        $addToSet: {commentLike: req.user.id}
-      },
-      {new: true}
-  )
+    alreadyLiked
+      ? { $pull: { commentLike: userId } }
+      : { $addToSet: { commentLike: userId } },
+    { new: true }
+  );
 
-  const createdNotification = await createNotification({
-    userId: comment.user,
-    type: "like",
-    commentId: comment.id,
-    content: "Somebody liked your commented"
-  })
-
-  return res
-  .status(201)
-  .json(
-    new ApiResponse(201, [updateLike, createdNotification], alreadyLiked? "Comment was unliked successfully" : "Comment was liked successfully")
-  )
-})
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      updateLike,
+      alreadyLiked
+        ? "Comment unliked successfully"
+        : "Comment liked successfully"
+    )
+  );
+});
 
 export {
   createAComment,

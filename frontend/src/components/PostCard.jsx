@@ -1,0 +1,93 @@
+import { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
+import api from "../context/api.js"
+
+const PostCard = ({ id, handle, handleId, isLiked = false, likes, comments, onClick, onDelete, title, content, time, category, }) => {
+  const { user } = useAuth();
+  const [liked, setLiked] = useState(isLiked);
+  const [likeCount, setLikeCount] = useState(likes);
+
+  const currentUserRole = user?.role; // Mocking role to allow admin/mod to delete
+
+  const timeAgo = (date) => {
+    const seconds = Math.floor((new Date() - new Date(date)) / 1000);
+    if (seconds < 60) return `${seconds}s`;
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`;
+    return `${Math.floor(seconds / 86400)}d`;
+  };
+
+
+  const toggleLike = async (e) => {
+    e.stopPropagation();
+    try {
+      await api.patch(`/posts/${id}/like`);
+      setLiked(!liked);
+      setLikeCount(liked ? likeCount - 1 : likeCount + 1);
+    } catch (error) {
+      console.log("Error while liking the post", error)
+    }
+  };
+
+  const handleCardClick = () => {
+    if (onClick && typeof onClick === 'function') {
+      onClick({ id, handle, isLiked: liked, likes: likeCount, comments, title, content, time, category });
+    }
+  };
+
+  const handleDelete = (e) => {
+    e.stopPropagation();
+    if (onDelete && typeof onDelete === 'function') {
+      onDelete(id);
+    }
+  };
+
+  return (
+    <div onClick={handleCardClick} className="bg-bg2 border border-border rounded-3xl p-3 cursor-pointer hover:border-border2 transition-colors relative">
+      <div className="flex items-center gap-1.5 mb-2">
+        <div className="w-6 h-6 rounded-full bg-opacity-15 bg-red-500 flex items-center justify-center text-xs flex-shrink-0">👻</div>
+        <span className="text-xs font-medium text-text">{handle}</span>
+        <span className="text-xs px-1.5 py-0.5 rounded-2xl bg-opacity-15 bg-red-500 border border-opacity-20 border-red-500 text-red-400 font-medium capitalize">{category}</span>
+        <span className="text-xs text-text3 ml-auto">{timeAgo(time)}</span>
+        
+        {/* Mod/Admin Delete Button */}
+        {(currentUserRole === 'admin' || currentUserRole === 'moderator' || handleId == user._id) && (
+          <button 
+            onClick={handleDelete} 
+            className="ml-2 p-1.5 rounded-full bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors"
+            title="Delete Post"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+          </button>
+        )}
+      </div>
+      {(title || !content) && (
+        <div className="text-sm font-bold text-text mb-1">
+          {title || "I have 61% attendance in OS and the exam is in 3 weeks. I have attended 0 classes this month."}
+        </div>
+      )}
+      <div className="text-sm leading-relaxed text-text mb-2.5">
+        {content || "I am not okay."}
+      </div>
+      <div className="flex gap-3.5">
+        <button onClick={toggleLike} className="flex items-center gap-1 text-xs text-text3 hover:text-red-400 transition-colors group">
+          <svg viewBox="0 0 16 16" fill={liked ? '#ED93B1' : 'none'} stroke={liked ? '#ED93B1' : 'currentColor'} strokeWidth="1.5" width="13" height="13">
+            <path d="M8 14s-6-4-6-8a4 4 0 018 0 4 4 0 018 0c0 4-6 8-6 8z" />
+          </svg>
+          <span>{likeCount}</span>
+        </button>
+        <button className="flex items-center gap-1 text-xs text-text3 hover:text-primary-mid transition-colors">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" width="13" height="13">
+            <path d="M14 10a2 2 0 01-2 2H5l-3 3V4a2 2 0 012-2h8a2 2 0 012 2v6z" />
+          </svg>
+          <span>{comments}</span>
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default PostCard;
