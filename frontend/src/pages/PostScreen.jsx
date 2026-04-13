@@ -224,10 +224,10 @@ const PostScreen = ({ onNavClick, postData }) => {
               {post?.tags}
             </span>
           </div>
-          {(currentUserRole === 'admin' || currentUserRole === 'moderator' || handleId == user._id) && (
+          {(currentUserRole === 'admin' || currentUserRole === 'moderator' || post?.owner._id == user._id) && (
             <button
               onClick={() => setDeleteConfig({ isOpen: true, type: 'post', commentId: null, replyId: null })}
-              className="p-1.5 rounded-full bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors"
+              className="p-1.5 rounded-full bg-red-500/10 text-red-500 hover:bg-re  d-500/20 transition-colors"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="3 6 5 6 21 6"></polyline>
