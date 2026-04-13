@@ -3,9 +3,10 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { Notification } from "../models/notification.models.js";
 
-const createNotification = async ({ userId, type, postId, commentId, content }) => {
+const createNotification = async ({ userId, senderId, type, postId, commentId, content }) => {
   await Notification.create({
     userId,
+    senderId,
     type,
     postId,
     commentId,
@@ -38,7 +39,7 @@ const markAsRead = asyncHandler(async (req, res) => {
 })
 
 const getAllNotifications = asyncHandler(async (req, res) => {
-  const allNotification = await Notification.find({userId :req.user.id}).populate('userId', 'name username').sort({createdAt: -1})
+  const allNotification = await Notification.find({userId :req.user.id}).populate('userId', 'name username').populate('senderId', 'name username').sort({createdAt: -1})
 
   return res
   .status(201)
