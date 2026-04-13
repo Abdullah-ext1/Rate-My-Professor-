@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken";
 import { verifyJwt } from "../middlewares/verifyJwt.js"
 import { verifyAdmin } from "../middlewares/verifyAdmin.js"
 import { verifyModerator } from "../middlewares/verifyModerator.js"
-import { bannedUser, changeAccountDetails, getCurrentUser, logOutUser, onboardingAuth, suspendUser, checkUsernameAvailability } from "../controller/auth.controller.js";
+import { bannedUser, changeAccountDetails, getCurrentUser, logOutUser, onboardingAuth, suspendUser, checkUsernameAvailability, approvePendingUser, rejectPendingUser, getPendingUsers } from "../controller/auth.controller.js";
 
 const router = Router();
 
@@ -31,5 +31,8 @@ router.put("/profile", verifyJwt, changeAccountDetails)
 router.post("/logout", verifyJwt, logOutUser)
 router.post("/ban/:id", verifyJwt, verifyAdmin, bannedUser)
 router.post("/suspend/:id", verifyJwt, verifyModerator, suspendUser)
+router.put("/approve/:userId", verifyJwt, verifyModerator, approvePendingUser)
+router.put("/reject/:userId", verifyJwt, verifyModerator, rejectPendingUser)
+router.get("/pending-users", verifyJwt, verifyModerator, getPendingUsers)
 
 export default router;

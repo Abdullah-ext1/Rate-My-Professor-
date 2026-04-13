@@ -1,9 +1,141 @@
+import { useState } from 'react';
 import { useAuth } from "../context/AuthContext";
-import api from "../context/api.js"
+import api from "../context/api.js";
+import { motion, AnimatePresence } from 'framer-motion';
+import { DEPARTMENTS } from '../utils/departments.js';
+
+const EditProfileModal = ({ isOpen, onClose, user, onUpdate }) => {
+  const [name, setName] = useState(user?.name || '');
+  const [username, setUsername] = useState(user?.username || '');
+  const [department, setDepartment] = useState(user?.department || '');
+  const [year, setYear] = useState(user?.year || '');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setError('');
+
+    try {
+      const response = await api.put('/auth/profile', {
+        name,
+        username,
+        department,
+        year
+      });
+      // The frontend should update its state and close the modal regardless of 'success' nesting if it reaches here okay.
+      // Easiest reliable way to ensure a full refresh as requested:
+      onUpdate(response.data?.data || response.data);
+      onClose();
+      window.location.reload();
+    } catch (err) {
+      console.log("Error while changing the details", error)
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <AnimatePresence>
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+        onClick={onClose}
+      >
+        <motion.div 
+          initial={{ y: '100%' }}
+          animate={{ y: 0 }}
+          exit={{ y: '100%' }}
+          transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+          className="w-full sm:w-[400px] bg-bg border border-border rounded-t-3xl sm:rounded-3xl p-5 max-h-[90vh] overflow-y-auto"
+          onClick={e => e.stopPropagation()}
+        >
+          <div className="flex justify-between items-center mb-5">
+            <h2 className="text-lg font-bold text-text font-syne">Edit Profile</h2>
+            <button onClick={onClose} className="w-8 h-8 rounded-full bg-bg2 flex items-center justify-center text-text3 hover:text-text">✕</button>
+          </div>
+
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            {error && <div className="text-accent-amber text-xs bg-accent-amber/10 p-2 rounded-lg">{error}</div>}
+            
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-text3 font-bold uppercase tracking-wider ml-1">Name</label>
+              <input 
+                type="text" 
+                value={name} 
+                onChange={(e) => setName(e.target.value)} 
+                className="bg-bg2 border border-border rounded-2xl px-4 py-3 text-sm text-text placeholder-text3 outline-none focus:border-primary-mid transition-colors"
+                placeholder="Your full name"
+                required
+              />
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-text3 font-bold uppercase tracking-wider ml-1">Username</label>
+              <div className="relative flex items-center">
+                <span className="absolute left-4 text-text3">@</span>
+                <input 
+                  type="text" 
+                  value={username} 
+                  onChange={(e) => setUsername(e.target.value)} 
+                  className="w-full bg-bg2 border border-border rounded-2xl pl-8 pr-4 py-3 text-sm text-text placeholder-text3 outline-none focus:border-primary-mid transition-colors"
+                  placeholder="username"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-text3 font-bold uppercase tracking-wider ml-1">Department</label>
+              <select
+                value={department}
+                onChange={(e) => setDepartment(e.target.value)}
+                className="bg-bg2 border border-border rounded-2xl px-4 py-3 text-sm text-text outline-none focus:border-primary-mid transition-colors appearance-none"
+              >
+                <option value="">Select department...</option>
+                {DEPARTMENTS.map((dept) => (
+                  <option key={dept.value} value={dept.value}>{dept.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-text3 font-bold uppercase tracking-wider ml-1">Year</label>
+              <select 
+                value={year} 
+                onChange={(e) => setYear(e.target.value)} 
+                className="bg-bg2 border border-border rounded-2xl px-4 py-3 text-sm text-text outline-none focus:border-primary-mid transition-colors appearance-none"
+              >
+                <option value="">Select Year</option>
+                <option value="1">1st Year</option>
+                <option value="2">2nd Year</option>
+                <option value="3">3rd Year</option>
+                <option value="4">4th Year</option>
+                <option value="5">5th Year+</option>
+              </select>
+            </div>
+
+            <button 
+              type="submit" 
+              disabled={isSubmitting}
+              className={`w-full mt-4 bg-primary text-white rounded-2xl py-3.5 text-sm font-semibold cursor-pointer transition-all active:scale-95 ${isSubmitting ? 'opacity-70' : 'hover:bg-primary-dark shadow-md hover:shadow-primary/30'}`}
+            >
+              {isSubmitting ? 'Updating...' : 'Save Details'}
+            </button>
+          </form>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+};
 
 const ProfileScreen = ({ onNavClick, currentUserRole }) => {
-  
-  const {user} = useAuth();
+  const {user, setUser} = useAuth();
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   return (
     <div className="flex flex-col flex-1 overflow-hidden bg-bg relative min-h-screen">
       {/* Top Navbar */}
@@ -17,6 +149,16 @@ const ProfileScreen = ({ onNavClick, currentUserRole }) => {
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-4 pt-20 pb-24 scrollbar-hide bg-bg">
+        {/* Edit Profile Modal */}
+        <EditProfileModal 
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          user={user}
+          onUpdate={(updatedData) => {
+            setUser({ ...user, ...updatedData });
+          }}
+        />
+
         {/* Profile Header */}
         <div className="flex flex-col items-center justify-center py-6 border-b border-border mb-6">
           <div className="w-24 h-24 rounded-full bg-primary-mid/10 border-4 border-bg2 outline outline-2 outline-primary-mid/30 flex items-center justify-center mb-4 shadow-lg overflow-hidden relative group cursor-pointer">
@@ -61,25 +203,23 @@ const ProfileScreen = ({ onNavClick, currentUserRole }) => {
         <div className="flex flex-col gap-2">
           <h3 className="text-xs font-bold text-text3 uppercase tracking-wider mb-2 ml-2">Settings</h3>
           
-          {[
-            { icon: 'M16 21v-2a4 4 0 0 0-4-4H5c-1.1 0-2 .9-2 2v2M21 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75', label: 'Friends & Followers' },
-            { icon: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z', label: 'Privacy & Safety' },
-            { icon: 'M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z', label: 'Display' }
-          ].map((item, i) => (
-            <button key={i} className="flex items-center gap-3 p-4 rounded-2xl hover:bg-bg2 transition-colors text-text group cursor-pointer w-full text-left">
-              <div className="w-8 h-8 rounded-full bg-bg3 flex items-center justify-center text-text3 group-hover:text-primary-mid group-hover:bg-primary-mid/10 transition-colors">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d={item.icon} />
-                </svg>
-              </div>
-              <span className="text-sm font-semibold flex-1">{item.label}</span>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-text3 group-hover:text-text transition-colors">
-                <path d="M9 18l6-6-6-6" />
+          <button 
+            onClick={() => setIsEditModalOpen(true)}
+            className="flex items-center gap-3 p-4 rounded-2xl hover:bg-bg2 transition-colors text-text group cursor-pointer w-full text-left"
+          >
+            <div className="w-8 h-8 rounded-full bg-bg3 flex items-center justify-center text-text3 group-hover:text-primary-mid group-hover:bg-primary-mid/10 transition-colors">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34" />
+                <polygon points="18 2 22 6 12 16 8 16 8 12 18 2" />
               </svg>
-            </button>
-          ))}
+            </div>
+            <span className="text-sm font-semibold flex-1">Edit Profile</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-text3 group-hover:text-text transition-colors">
+              <path d="M9 18l6-6-6-6" />
+            </svg>
+          </button>
 
-          {user?.role === 'admin' && (
+          {(user?.role === 'admin' || user?.role === 'moderator') && (
             <button 
               onClick={() => onNavClick('admin')}
               className="w-full flex items-center justify-between p-4 hover:bg-hover active:bg-divider transition-colors"
@@ -88,13 +228,28 @@ const ProfileScreen = ({ onNavClick, currentUserRole }) => {
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                 </svg>
-                <span className="text-sm font-medium">Admin Dashboard</span>
+                <span className="text-sm font-medium">{user.role === 'admin' ? 'Admin Dashboard' : 'Moderator Dashboard'}</span>
               </div>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16" className="text-text3">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 18l6-6-6-6" />
               </svg>
             </button>
           )}
+
+          <button 
+            onClick={() => onNavClick('privacy')}
+            className="flex items-center gap-3 p-4 rounded-2xl hover:bg-bg3 transition-colors active:scale-95 text-text group cursor-pointer w-full text-left mt-2"
+          >
+            <div className="w-8 h-8 rounded-full bg-slate-500/10 text-slate-500 flex items-center justify-center group-hover:bg-slate-500/20 transition-colors">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
+            </div>
+            <span className="text-sm font-semibold flex-1">Privacy & Safety</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-text3 group-hover:text-text transition-colors">
+              <path d="M9 18l6-6-6-6" />
+            </svg>
+          </button>
 
           <button 
             onClick={async () => {

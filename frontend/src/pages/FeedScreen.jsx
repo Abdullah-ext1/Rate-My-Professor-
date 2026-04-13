@@ -56,12 +56,28 @@ const FeedScreen = ({ onNavClick }) => {
     setPostToDelete(id);
   };
 
+  const getFilteredPosts = () => {
+    if (activeHTab === 'All') return posts;
+    
+    const tabToTagMap = {
+      'Confessions': 'confession',
+      'Attendance': 'attendance',
+      'Questions': 'question',
+      'Rants': 'rant',
+      'Other': 'other'
+    };
+    
+    return posts.filter(post => post.tags && post.tags.toLowerCase() === tabToTagMap[activeHTab]);
+  };
+
+  const filteredPosts = getFilteredPosts();
+
   return (
     <div className="flex flex-col flex-1 overflow-hidden bg-bg relative">
     <FeedTopNav onNavClick={onNavClick} />
   
       <HorizontalTabs
-        tabs={['All', 'Confessions', 'Attendance', 'Questions', 'Rants']}
+        tabs={['All', 'Confessions', 'Attendance', 'Questions', 'Rants', 'Other']}
         activeTab={activeHTab}
         setActiveTab={setActiveHTab}
       />
@@ -75,8 +91,8 @@ const FeedScreen = ({ onNavClick }) => {
             <PostCardSkeleton />
           </>
 
-        ) : (
-          posts.map(post => (
+        ) : filteredPosts.length > 0 ? (
+          filteredPosts.map(post => (
             <PostCard
               key={post._id}
               id={post._id}
@@ -88,12 +104,15 @@ const FeedScreen = ({ onNavClick }) => {
               content={post.content}
               likes={post.likes.length}
               comments={post.comments.length}
-              isLiked={post.likes.includes(user._id)}
+              isLiked={post.likes.some(like => like === user._id || like._id === user._id)}
               time={post.createdAt}
               category={post.tags}
             />
           ))
-          
+        ) : (
+          <div className="text-center text-text3 text-sm py-10 opacity-70">
+            No posts found in this category.
+          </div>
         )}
       </ScrollArea>
       <ConfirmModal 

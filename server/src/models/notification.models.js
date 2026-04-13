@@ -7,7 +7,7 @@ const notificationSchema = new Schema({
   },
   type: {
     type: String,
-    enum: ['message', 'comment', 'like', "announcement", 'other'],
+    enum: ['message', 'comment', 'like', "announcement", "pyqApproved", "pyqRejected", 'other'],
     required: true
   },
   commentId: {

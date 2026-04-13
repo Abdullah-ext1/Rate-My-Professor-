@@ -34,14 +34,31 @@ const moderatePYQ = asyncHandler(async (req, res) => {
     throw new ApiError(400, "isApproved field is required")
   }
 
-  const pyq = await PYQ.findById(pyqId)
-
+  const pyq = await PYQ.findByIdAndUpdate(
+    pyqId, 
+    { $set: { isApproved: isApproved } },
+    { new: true }
+  );
+  
   if(!pyq) {
     throw new ApiError(404, "PYQ not found")
   }
 
-  pyq.isApproved = isApproved
-  await pyq.save()
+  if(isApproved === true) {
+    await createNotification({
+      userId: pyq.owner,
+      type: 'pyqApproved',
+      content: `Your submission "${pyq.subjectName} ${pyq.year} - ${pyq.examType}" has been approved!`
+    })
+  } else {
+    await createNotification({
+      userId: pyq.owner,
+      type: 'pyqRejected',
+      content: `Your submission "${pyq.subjectName} ${pyq.year} - ${pyq.examType}" has been rejected.`
+    })
+  }
+
+  
 
   return res
   .status(200)
@@ -54,7 +71,21 @@ const moderatePYQ = asyncHandler(async (req, res) => {
 const getPYQs = asyncHandler(async (req, res) => {
   const {subjectName, year, examType} = req.query
 
-  const filter = {college: req.user.college, isApproved: true}
+  const filter = (req.user.role === 'admin' || req.user.role === 'moderator') 
+    ? {} 
+    : { college: req.user.college };
+
+  if (req.user.role !== 'admin' && req.user.role !== 'moderator') {
+    // Normal user sees approved ones OR their own uploads
+    filter.$or = [
+      { isApproved: true },
+      { owner: req.user._id }
+    ];
+  }
+  if(req.query.isApproved !== undefined && (req.user.role === 'admin' || req.user.role === 'moderator')) {
+    filter.isApproved = req.query.isApproved === 'true'
+  }
+
 
   if(subjectName) {
     filter.subjectName = subjectName
@@ -66,7 +97,7 @@ const getPYQs = asyncHandler(async (req, res) => {
     filter.examType = examType
   }
 
-  const pyqs = await PYQ.find(filter).sort({createdAt: -1})
+  const pyqs = await PYQ.find(filter).sort({createdAt: -1}).populate('owner', 'name')
 
   return res
   .status(200)
@@ -93,7 +124,7 @@ const deletePYQ = asyncHandler(async (req, res) => {
     throw new ApiError(403, "You are not authorized to delete this PYQ")
   }
 
-  await pyq.remove()
+  await PYQ.deleteOne({ _id: pyq._id })
 
   return res
   .status(200)

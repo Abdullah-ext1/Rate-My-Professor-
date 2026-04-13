@@ -27,11 +27,19 @@ const createAComment = asyncHandler(async(req, res) => {
   await Post.findByIdAndUpdate(postId, {
     $push: { comments: createComment._id }
   })
+
+  const createdNotification = await createNotification({
+    userId: post.owner,
+    type: "comment",
+    postId: post._id,
+    commentId: createComment._id,
+    content: "Somebody commented on your post"
+  })
   
   return res
   .status(201)
   .json(
-    new ApiResponse(201, createComment, "Comment created successfully")
+    new ApiResponse(201, [createComment, createdNotification], "Comment created successfully")
   )
 }) 
 

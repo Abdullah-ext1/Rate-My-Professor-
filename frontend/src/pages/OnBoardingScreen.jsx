@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from "../context/api.js";
 import { useAuth } from '../context/AuthContext.jsx';
+import { DEPARTMENTS } from '../utils/departments.js';
 
 const OnBoardingScreen = () => {
   const { user, refetchUser } = useAuth();
@@ -17,6 +18,7 @@ const OnBoardingScreen = () => {
   const [error, setError] = useState(null);
   const [usernameError, setUsernameError] = useState(null);
   const [checkingUsername, setCheckingUsername] = useState(false);
+  const [domainMatched, setDomainMatched] = useState(true);
 
   useEffect(() => {
     const fetchColleges = async () => {
@@ -32,6 +34,9 @@ const OnBoardingScreen = () => {
             const matchedCollege = fetchedColleges.find(c => c.domain === userDomain);
             if (matchedCollege) {
               setFormData(prev => ({ ...prev, college: matchedCollege._id }));
+              setDomainMatched(true);
+            } else {
+              setDomainMatched(false);
             }
           }
         }
@@ -153,13 +158,32 @@ const OnBoardingScreen = () => {
             <>
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-semibold text-text2 ml-1">College</label>
-                <div className="bg-bg3 border border-border2 px-4 py-3.5 rounded-xl text-text3 text-sm flex items-center cursor-not-allowed">
-                  {formData.college 
-                    ? colleges.find(c => c._id === formData.college)?.name 
-                    : "Checking your college email domain..."}
-                </div>
-                {/* hidden hidden select just in case anything else accesses it */}
-                <input type="hidden" name="college" value={formData.college} />
+                {domainMatched ? (
+                  <div className="bg-bg3 border border-border2 px-4 py-3.5 rounded-xl text-text3 text-sm flex items-center cursor-not-allowed">
+                    {formData.college 
+                      ? colleges.find(c => c._id === formData.college)?.name 
+                      : "Checking your college email domain..."}
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <select
+                      name="college"
+                      value={formData.college}
+                      onChange={handleChange}
+                      className="bg-bg2 border border-border2 focus:border-primary px-4 py-3.5 rounded-xl text-text text-sm w-full outline-none transition-colors appearance-none"
+                    >
+                      <option value="">Select your college...</option>
+                      {colleges.map(c => (
+                        <option key={c._id} value={c._id}>{c.name}</option>
+                      ))}
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-text3">
+                      <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                    </div>
+                  </div>
+                )}
+                {/* hidden select just in case anything else accesses it */}
+                {domainMatched && <input type="hidden" name="college" value={formData.college} />}
               </div>
 
               <div className="flex flex-col gap-1.5">
@@ -171,12 +195,9 @@ const OnBoardingScreen = () => {
                   className="bg-bg2 border border-border2 focus:border-primary px-4 py-3.5 rounded-xl text-text text-sm outline-none transition-colors appearance-none"
                 >
                   <option value="">Select department...</option>
-                  <option value="CS">Computer Science</option>
-                  <option value="IT">Information Technology</option>
-                  <option value="EXTC">Electronics & Tele</option>
-                  <option value="MECH">Mechanical</option>
-                  <option value="CIVIL">Civil</option>
-                  <option value="OTHER">Other</option>
+                  {DEPARTMENTS.map((dept) => (
+                    <option key={dept.value} value={dept.value}>{dept.label}</option>
+                  ))}
                 </select>
               </div>
 

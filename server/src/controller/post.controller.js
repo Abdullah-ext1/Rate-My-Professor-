@@ -41,7 +41,11 @@ const getPosts = asyncHandler(async( req, res ) => {
   const skip = (page - 1) * limit // calculate the number of posts to skip based on the current page and limit
 
   const filter = req.user.role === 'admin' ? {} : { college: req.user.college }
-  const posts = await Post.find(filter).populate('owner', 'name').skip(skip).limit(limit)
+  const posts = await Post.find(filter)
+    .populate('owner', 'name')
+    .sort({ createdAt: -1 }) // Makes sure newest posts appear first
+    .skip(skip)
+    .limit(limit)
 
   return res
   .status(200)
@@ -65,17 +69,19 @@ const likeAPost = asyncHandler(async(req, res) => {
     {new: true}
   )
 
-  const notifcation = await createNotification({
-    userId: post.owner,
-    type: 'like',
-    postId: post._id,
-    content: 'Someone liked your post'
-  })
-
+  if(!alreadyLiked){
+      const notifcation = await createNotification({
+      userId: post.owner,
+      type: 'like',
+      postId: post._id,
+      content: 'Someone liked your post'
+    })
+    return res.status(200).json(new ApiResponse(200, [notifcation, updateLike], "Video was liked successfully"))
+  }
 
   return res.
   status(200)
-  .json(new ApiResponse(201, [updateLike, notifcation], "Video was liked successfully"))
+  .json(new ApiResponse(201, [updateLike], "Video was liked successfully"))
 })
 
 const deleteAPost = asyncHandler(async(req, res) => {
@@ -119,12 +125,14 @@ const getPostById = asyncHandler(async (req, res) => {
   
   const post = await Post.findByIdAndUpdate(postId, {
     $inc: {views: 1},
-  }, {new: true}).populate("owner", "name")
+  }, {new: true})
+    .populate("owner", "name")
+    .select("+likes +comments +tags +createdAt +updatedAt")
 
   return res
   .status(201)
   .json(
-    new ApiResponse(201, post, "View of the post was increemented successfully")
+    new ApiResponse(201, post, "Post fetched successfully")
   )
 })
 

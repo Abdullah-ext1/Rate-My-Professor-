@@ -9,7 +9,6 @@ const userSchema = new mongoose.Schema({
     type: String,
     unique: true,
     sparse: true,
-    required: false
   },
   email: {
     type: String,
@@ -35,6 +34,11 @@ const userSchema = new mongoose.Schema({
     type: String,
     enum: ['user', 'admin', 'moderator',],
     default: 'user'
+  },
+  status: {
+    type: String,
+    enum: ['pending', 'active', 'rejected'],
+    default: 'active'
   },
   college: {
     type: Schema.Types.ObjectId,

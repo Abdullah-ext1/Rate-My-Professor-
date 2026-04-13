@@ -22,12 +22,13 @@ const createAnnouncement = asyncHandler(async (req, res) => {
 
     const users = await User.find({ college: req.user.college })
 
-    for (const user of users) {
-    await createNotification({
+    const promise = users.map(user => createNotification({
         userId: user._id,
         type: 'announcement',
         content: 'Alert! An announcement has been made'
-    })}
+    }))
+
+    await Promise.all(promise)
 
     return res
         .status(201)
@@ -39,6 +40,7 @@ const createAnnouncement = asyncHandler(async (req, res) => {
             )
         )
 })
+
 const getAllAnnouncements = asyncHandler(async (req, res) => {
     const announcements = await Post
     .find({ college: req.user.college, isAnnouncement: true })

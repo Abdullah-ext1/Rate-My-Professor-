@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import api from "../context/api.js"
+import api from "../context/api.js";
+import { timeAgo } from '../utils/timeAgo';
 
 const PostCard = ({ id, handle, handleId, isLiked = false, likes, comments, onClick, onDelete, title, content, time, category, }) => {
   const { user } = useAuth();
@@ -9,12 +10,26 @@ const PostCard = ({ id, handle, handleId, isLiked = false, likes, comments, onCl
 
   const currentUserRole = user?.role; // Mocking role to allow admin/mod to delete
 
-  const timeAgo = (date) => {
-    const seconds = Math.floor((new Date() - new Date(date)) / 1000);
-    if (seconds < 60) return `${seconds}s`;
-    if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
-    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`;
-    return `${Math.floor(seconds / 86400)}d`;
+  const getCategoryStyles = (cat) => {
+    switch (cat?.toLowerCase()) {
+      case 'confession': return 'bg-red-500/15 border-red-500/20 text-red-500';
+      case 'question': return 'bg-blue-500/15 border-blue-500/20 text-blue-500';
+      case 'rant': return 'bg-orange-500/15 border-orange-500/20 text-orange-500';
+      case 'attendance': return 'bg-emerald-500/15 border-emerald-500/20 text-emerald-500';
+      case 'other': return 'bg-slate-500/15 border-slate-500/20 text-slate-500';
+      default: return 'bg-primary/15 border-primary/20 text-primary-mid';
+    }
+  };
+
+  const getAvatarStyles = (cat) => {
+    switch (cat?.toLowerCase()) {
+      case 'confession': return 'bg-red-500/15';
+      case 'question': return 'bg-blue-500/15';
+      case 'rant': return 'bg-orange-500/15';
+      case 'attendance': return 'bg-emerald-500/15';
+      case 'other': return 'bg-slate-500/15';
+      default: return 'bg-primary/15';
+    }
   };
 
 
@@ -43,11 +58,11 @@ const PostCard = ({ id, handle, handleId, isLiked = false, likes, comments, onCl
   };
 
   return (
-    <div onClick={handleCardClick} className="bg-bg2 border border-border rounded-3xl p-3 cursor-pointer hover:border-border2 transition-colors relative">
+    <div onClick={handleCardClick} className="bg-bg2 border border-border rounded-3xl p-3 cursor-pointer hover:border-border2 hover:-translate-y-[2px] shadow-sm hover:shadow-md transition-all duration-300 ease-out relative">
       <div className="flex items-center gap-1.5 mb-2">
-        <div className="w-6 h-6 rounded-full bg-opacity-15 bg-red-500 flex items-center justify-center text-xs flex-shrink-0">👻</div>
+        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs flex-shrink-0 ${getAvatarStyles(category)}`}>👻</div>
         <span className="text-xs font-medium text-text">{handle}</span>
-        <span className="text-xs px-1.5 py-0.5 rounded-2xl bg-opacity-15 bg-red-500 border border-opacity-20 border-red-500 text-red-400 font-medium capitalize">{category}</span>
+        <span className={`text-xs px-1.5 py-0.5 rounded-2xl border font-medium capitalize ${getCategoryStyles(category)}`}>{category}</span>
         <span className="text-xs text-text3 ml-auto">{timeAgo(time)}</span>
         
         {/* Mod/Admin Delete Button */}

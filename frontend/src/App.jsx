@@ -13,6 +13,9 @@ import NotificationScreen from './pages/NotificationScreen';
 import LeaderboardScreen from './pages/LeaderboardScreen';
 import RateProfessorScreen from './pages/RateProfessorScreen';
 import OnBoardingScreen from './pages/OnBoardingScreen';
+import PrivacyPolicyScreen from './pages/PrivacyPolicyScreen';
+import ModeratorDashboard from './pages/ModeratorDashboard';
+import { AnimatePresence, motion } from 'framer-motion';
 import {ProtectedRoute} from "./context/ProtectedRoute"
 import { useAuth } from './context/AuthContext';
 
@@ -138,6 +141,26 @@ const AppLayout = () => {
               </div>
             </ProtectedRoute>
           } />
+
+          <Route path="/moderator-dashboard" element={
+            <ProtectedRoute>
+              <div className="animate-fade-in">
+                <ModeratorDashboard onNavClick={handleNavClick} />
+              </div>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/privacy" element={
+            <motion.div 
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+            >
+              <PrivacyPolicyScreen onNavClick={handleNavClick} />
+            </motion.div>
+          } />
+          
           <Route path="/onboarding" element={<div className="animate-fade-in"><OnBoardingScreen /></div>} />
           <Route path="/" element={<RootRedirect/>} />
         </Routes>

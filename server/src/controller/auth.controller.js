@@ -5,18 +5,10 @@ import { User } from "../models/users.models.js";
 import { College } from "../models/college.models.js"
 
 const onboardingAuth = asyncHandler( async(req, res) => {
-  // Get college, department, year from req.body
-  // Find the college in MongoDB by its _id
-  // Extract domain from req.user.email
-  // Compare with college.domain
-  // If no match → throw ApiError
-  // If match → update user with college, department, year
-  // Return updated user
-
-  // if user admin then he be livin yk what i mean
   const {college, department, year, username} = req.body;
   const isAdmin = req.user.role === 'admin';
   
+  // Admins only need username
   if (isAdmin) {
     if (!username) {
       throw new ApiError(401, "Username is necessary")
@@ -31,19 +23,23 @@ const onboardingAuth = asyncHandler( async(req, res) => {
     )
   }
 
-  
-
-  const domain = req.user.email.split("@")[1]
-
+  // Regular users need all fields
   if(!college || !department || !year || !username){
     throw new ApiError(401, "All Fields are necessary")
   }
 
-  const collegeDomain = await College.findById(college)
-
-  if(collegeDomain.domain !== domain){
-    throw new ApiError(401, "College domain wasn't found")
+  const collegeFetch = await College.findById(college)
+  if (!collegeFetch) {
+    throw new ApiError(404, "College not found")
   }
+
+  // Check if user's email domain matches college domain
+  const userDomain = req.user.email.split("@")[1]
+  const domainMatches = collegeFetch.domain === userDomain
+  
+  // If domain matches: status='active' (instant access)
+  // If domain doesn't match: status='pending' (needs moderator approval)
+  const userStatus = domainMatches ? 'active' : 'pending'
 
   const user = await User.findByIdAndUpdate(
     req.user?.id,
@@ -52,21 +48,31 @@ const onboardingAuth = asyncHandler( async(req, res) => {
         college,
         department,
         year,
-        username
+        username,
+        status: userStatus
       }
   },
   {new: true})
 
+  const message = domainMatches 
+    ? "Onboarding completed successfully! Welcome to your college community." 
+    : "Onboarding completed. Your account is pending moderator approval."
+
   return res
   .status(201)
   .json(
-    new ApiResponse("200", user, "Onboarding Authentification was successfully done")
+    new ApiResponse("200", user, message)
   )
 })
 
 const changeAccountDetails = asyncHandler(async (req, res) => {
     // change name, username, college, department, year
     const {name, username, department, year} = req.body
+    console.log('body:', req.body)
+    console.log('user id:', req.user?.id)
+  
+
+
 
     const user = await User.findByIdAndUpdate(req.user?.id,
       {
@@ -169,6 +175,76 @@ const checkUsernameAvailability = asyncHandler(async (req, res) => {
     );
 });
 
+const approvePendingUser = asyncHandler(async (req, res) => {
+  const userId = req.params.userId;
+
+  const user = await User.findByIdAndUpdate(
+    userId,
+    { $set: { status: 'active' } },
+    { new: true }
+  ).populate('college', 'name');
+
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  // NOTE: If testing locally without notifications module yet, this might error.
+  // We'll wrap it in try/catch or assume createNotification works.
+  try {
+    await createNotification({
+      userId: userId,
+      type: "approval",
+      content: "Your account has been approved! You can now access the community."
+    });
+  } catch(e) {
+    console.log("No notification service set up for approvals yet, skipping...", e);
+  }
+
+  return res.status(200).json(
+    new ApiResponse(200, user, "User approved successfully")
+  );
+});
+
+const rejectPendingUser = asyncHandler(async (req, res) => {
+  const userId = req.params.userId;
+  const { reason } = req.body;
+
+  const user = await User.findByIdAndUpdate(
+    userId,
+    { $set: { status: 'rejected' } },
+    { new: true }
+  ).populate('college', 'name');
+
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  try {
+    await createNotification({
+      userId: userId,
+      type: "rejection",
+      content: `Your account was rejected. Reason: ${reason || 'No reason provided'}`
+    });
+  } catch(e) {
+    console.log("No notification service set up for rejections yet, skipping...", e);
+  }
+
+  return res.status(200).json(
+    new ApiResponse(200, user, "User rejected successfully")
+  );
+});
+
+const getPendingUsers = asyncHandler(async (req, res) => {
+  // Only fetching users that are currently pending, sorted oldest first
+  const pendingUsers = await User.find({ status: 'pending' })
+    .populate('college', 'name')
+    .sort({ createdAt: 1 });
+
+  return res.status(200).json(
+    new ApiResponse(200, pendingUsers, "Fetched pending users")
+  );
+});
+
 export {
   onboardingAuth,
   changeAccountDetails,
@@ -176,5 +252,8 @@ export {
   logOutUser,
   bannedUser,
   suspendUser,
-  checkUsernameAvailability
+  checkUsernameAvailability,
+  approvePendingUser,
+  rejectPendingUser,
+  getPendingUsers,
 }

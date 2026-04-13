@@ -2,16 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import ConfirmModal from '../components/ConfirmModal';
 import { useAuth } from '../context/AuthContext';
 import api from '../context/api';
-import { useParams } from 'react-router-dom'
-
-
-const timeAgo = (date) => {
-  const seconds = Math.floor((new Date() - new Date(date)) / 1000);
-  if (seconds < 60) return `${seconds}s`;
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`;
-  return `${Math.floor(seconds / 86400)}d`;
-};
+import { useParams } from 'react-router-dom';
+import { timeAgo } from '../utils/timeAgo';
 
 const PostScreen = ({ onNavClick, postData }) => {
   const { user } = useAuth();
@@ -33,15 +25,17 @@ const PostScreen = ({ onNavClick, postData }) => {
       const response = await api.get(`/posts/${id}`);
       const data = response.data.data;
       setPost(data);
-      setLiked(data.likes.includes(user._id));
-      setLikeCount(data.likes.length);
+      // Handle both ObjectId strings and direct comparisons
+      const userLiked = data.likes?.some(like => like === user._id || like._id === user._id);
+      setLiked(userLiked || false);
+      setLikeCount(data.likes?.length || 0);
       const commentResponse = await api.get(`/comments/${id}`);
       const commentsData = commentResponse.data.data.map(comment => ({
         ...comment,
-        isLiked: comment.commentLike?.includes(user._id),
+        isLiked: comment.commentLike?.some(like => like === user._id || like._id === user._id),
         replies: comment.replies?.map(reply => ({
           ...reply,
-          isLiked: reply.commentLike?.includes(user._id)
+          isLiked: reply.commentLike?.some(like => like === user._id || like._id === user._id)
         }))
       }));
       setComments(commentsData);
@@ -51,7 +45,7 @@ const PostScreen = ({ onNavClick, postData }) => {
       }
     };
     fetchPost();
-  }, [id]);
+  }, [id]); // why the id is here ? its because when we navigate to a different post, the component doesn't unmount but the id changes, so we need to refetch the post data whenever the id changes. If we left the dependency array empty, it would only fetch the post data once when the component mounts and would not update if we navigate to another post.
 
 
   const toggleLike = async () => {
@@ -86,10 +80,10 @@ const PostScreen = ({ onNavClick, postData }) => {
       const response = await api.get(`/comments/${id}`);
       const commentsData = response.data.data.map(comment => ({
         ...comment,
-        isLiked: comment.commentLike?.includes(user._id),
+        isLiked: comment.commentLike?.some(like => like === user._id || like._id === user._id),
         replies: comment.replies?.map(reply => ({
           ...reply,
-          isLiked: reply.commentLike?.includes(user._id)
+          isLiked: reply.commentLike?.some(like => like === user._id || like._id === user._id)
         }))
       }));
       setComments(commentsData);
@@ -169,15 +163,37 @@ const PostScreen = ({ onNavClick, postData }) => {
   const confirmDelete = () => {
     if (deleteConfig.type === 'reply') {
       setComments(comments.map(c => {
-        if (c.id === deleteConfig.commentId) {
-          return { ...c, replies: c.replies.filter(r => r.id !== deleteConfig.replyId) };
+        if (c._id === deleteConfig.commentId) {
+          return { ...c, replies: c.replies.filter(r => r._id !== deleteConfig.replyId) };
         }
         return c;
       }));
     } else if (deleteConfig.type === 'comment') {
-      setComments(comments.filter(c => c.id !== deleteConfig.commentId));
+      setComments(comments.filter(c => c._id !== deleteConfig.commentId));
     } else if (deleteConfig.type === 'post') {
       onNavClick('feed');
+    }
+  };
+
+  const getCategoryStyles = (cat) => {
+    switch (cat?.toLowerCase()) {
+      case 'confession': return 'bg-red-500/15 border-red-500/20 text-red-500';
+      case 'question': return 'bg-blue-500/15 border-blue-500/20 text-blue-500';
+      case 'rant': return 'bg-orange-500/15 border-orange-500/20 text-orange-500';
+      case 'attendance': return 'bg-emerald-500/15 border-emerald-500/20 text-emerald-500';
+      case 'other': return 'bg-slate-500/15 border-slate-500/20 text-slate-500';
+      default: return 'bg-primary/15 border-primary/20 text-primary-mid';
+    }
+  };
+
+  const getAvatarStyles = (cat) => {
+    switch (cat?.toLowerCase()) {
+      case 'confession': return 'bg-red-500/15';
+      case 'question': return 'bg-blue-500/15';
+      case 'rant': return 'bg-orange-500/15';
+      case 'attendance': return 'bg-emerald-500/15';
+      case 'other': return 'bg-slate-500/15';
+      default: return 'bg-primary/15';
     }
   };
 
@@ -199,16 +215,16 @@ const PostScreen = ({ onNavClick, postData }) => {
         {/* Post Header */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-opacity-15 bg-red-500 flex items-center justify-center text-sm flex-shrink-0">👻</div>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm flex-shrink-0 ${getAvatarStyles(post?.tags)}`}>👻</div>
             <div className="flex flex-col">
               <span className="text-sm font-medium text-text">{post?.owner.name}</span>
               <span className="text-xs text-text3">{timeAgo(post?.createdAt)} ago</span>
             </div>
-            <span className="text-xs px-2 py-0.5 rounded-2xl bg-opacity-15 bg-red-500 border border-opacity-20 border-red-500 text-red-400 font-medium ml-2 capitalize">
+            <span className={`text-xs px-2 py-0.5 rounded-2xl border font-medium ml-2 capitalize ${getCategoryStyles(post?.tags)}`}>
               {post?.tags}
             </span>
           </div>
-          {(currentUserRole === 'admin' || currentUserRole === 'moderator') && (
+          {(currentUserRole === 'admin' || currentUserRole === 'moderator' || handleId == user._id) && (
             <button
               onClick={() => setDeleteConfig({ isOpen: true, type: 'post', commentId: null, replyId: null })}
               className="p-1.5 rounded-full bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors"

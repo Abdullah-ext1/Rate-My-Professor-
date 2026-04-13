@@ -1,7 +1,13 @@
 import { useState, useEffect } from "react";
 import { PYQSkeleton } from "../components/Skeleton";
+import { useAuth } from "../context/AuthContext";
+import api from "../context/api.js";
 
-const TopNav = ({ onNavClick }) => (
+const TopNav = ({ onNavClick }) => {
+  const { user } = useAuth();
+  const canModerate = user?.role === 'admin' || user?.role === 'moderator';
+
+  return (
   <div className="fixed top-0 left-0 right-0 bg-bg px-4 py-2.5 flex items-center justify-between flex-shrink-0 border-b border-border z-30">
     <div className="flex items-center gap-2">
       <div className="text-base font-bold text-text font-syne tracking-tight">
@@ -10,18 +16,21 @@ const TopNav = ({ onNavClick }) => (
       <div className="text-xs px-2 py-0.5 rounded-full bg-opacity-15 bg-primary border border-opacity-30 border-primary text-primary-mid font-medium">Vault</div>
     </div>
     
-    <button 
-      onClick={() => onNavClick('moderator-dashboard')}
-      className="p-1.5 bg-bg2 hover:bg-border rounded-full text-primary transition-colors border border-border flex items-center gap-1.5 px-3 cursor-pointer shadow-sm"
-      title="Moderator Dashboard"
-    >
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-      </svg>
-      <span className="text-[10px] font-bold tracking-wider uppercase">Mod</span>
-    </button>
+    {canModerate && (
+      <button 
+        onClick={() => onNavClick('moderator-dashboard')}
+        className="p-1.5 bg-bg2 hover:bg-border rounded-full text-primary transition-colors border border-border flex items-center gap-1.5 px-3 cursor-pointer shadow-sm"
+        title="Moderator Dashboard"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+        </svg>
+        <span className="text-[10px] font-bold tracking-wider uppercase">Mod</span>
+      </button>
+    )}
   </div>
-);
+  );
+};
 
 const SegmentedControl = ({ active, setActive }) => (
   <div className="flex bg-bg2 p-1.5 rounded-2xl mb-4 border border-border">
@@ -42,13 +51,18 @@ const SegmentedControl = ({ active, setActive }) => (
   </div>
 );
 
-const SearchBar = () => (
+const SearchBar = ({ searchQuery, setSearchQuery }) => (
   <div className="flex items-center gap-2 bg-bg2 border border-border rounded-2.5 px-3 py-2 mb-3">
     <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-text3">
       <circle cx="7" cy="7" r="5" />
       <path d="M11 11l3 3" />
     </svg>
-    <input placeholder="Search subjects..." className="flex-1 bg-transparent border-none text-xs text-text placeholder-text3 outline-none" />
+    <input 
+      placeholder="Search subjects..." 
+      value={searchQuery}
+      onChange={e => setSearchQuery(e.target.value)}
+      className="flex-1 bg-transparent border-none text-xs text-text placeholder-text3 outline-none" 
+    />
   </div>
 );
 
@@ -70,8 +84,8 @@ const HorizontalTabs = ({ tabs, activeTab, setActiveTab }) => (
   </div>
 );
 
-const PYQCard = ({ subjectName, year, examType, isApproved }) => (
-  <div className="bg-bg2 border border-border rounded-3xl p-3.5 mb-3 flex gap-3 cursor-pointer hover:border-border2 transition-colors relative overflow-hidden group">
+const PYQCard = ({ subjectName, year, examType, isApproved, questionPaperUrl }) => (
+  <div onClick={() => questionPaperUrl && window.open(questionPaperUrl, '_blank')} className="bg-bg2 border border-border rounded-3xl p-3.5 mb-3 flex gap-3 cursor-pointer hover:border-border2 transition-colors relative overflow-hidden group">
     <div className="w-10 h-10 rounded-2xl bg-opacity-15 bg-primary flex items-center justify-center text-primary-mid flex-shrink-0">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M14 2H6a2 2 0 0 0-2 2v16c0 1.1.9 2 2 2h12a2 2 0 0 0 2-2V8l-6-6z" />
@@ -112,12 +126,45 @@ const UploadFloatingButton = ({ onClick }) => (
   </button>
 );
 
-const UploadModal = ({ isOpen, onClose }) => {
+const UploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
   const [type, setType] = useState('PYQ');
   const [subjectName, setSubjectName] = useState('');
   const [year, setYear] = useState('');
   const [examType, setExamType] = useState('End Semester');
   const [fileUrl, setFileUrl] = useState(''); // Would typically be an actual file upload
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async () => {
+    if (!subjectName || !year || !fileUrl) {
+      setError('Please fill in all required fields');
+      return;
+    }
+    
+    setIsSubmitting(true);
+    setError('');
+    
+    try {
+      const response = await api.post('/pyqs', {
+        subjectName,
+        year: parseInt(year) || year,
+        questionPaperUrl: fileUrl,
+        examType: type === 'PYQ' ? examType : 'Notes'
+      })
+
+      if (response.data) {
+        onUploadSuccess?.()
+        setSubjectName('')
+        setYear('')
+        setFileUrl('')
+        onClose()
+      }
+    } catch (err) {
+      setError('Network error. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -147,6 +194,7 @@ const UploadModal = ({ isOpen, onClose }) => {
         </div>
 
         <div className="flex flex-col gap-4">
+          {error && <div className="text-accent-amber text-xs font-medium p-2 bg-accent-amber/10 rounded-lg">{error}</div>}
           <div>
             <label className="text-xs text-text3 font-medium mb-1 block">Subject Name</label>
             <input 
@@ -217,10 +265,11 @@ const UploadModal = ({ isOpen, onClose }) => {
         </div>
 
         <button 
-          onClick={onClose}
-          className="w-full mt-6 bg-primary text-white rounded-xl py-3 text-sm font-semibold cursor-pointer hover:bg-primary-dark transition-colors"
+          onClick={handleSubmit}
+          disabled={isSubmitting}
+          className={`w-full mt-6 bg-primary text-white rounded-xl py-3 text-sm font-semibold cursor-pointer transition-colors ${isSubmitting ? 'opacity-70 cursor-not-allowed' : 'hover:bg-primary-dark'}`}
         >
-          Submit for Review
+          {isSubmitting ? 'Submitting...' : 'Submit for Review'}
         </button>
       </div>
     </div>
@@ -229,42 +278,47 @@ const UploadModal = ({ isOpen, onClose }) => {
 
 const PYQsScreen = ({ onNavClick }) => {
   const [activeTab, setActiveTab] = useState('pyqs');
+  const [activeFilter, setActiveFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [items, setItems] = useState([]);
 
-  useEffect(() => {
-    // Simulate API fetch delay
+  const fetchItems = async () => {
     setIsLoading(true);
-    const timer = setTimeout(() => {
+    try {
+      const res = await api.get('/pyqs');
+      setItems(res.data.data)
+    } catch (err) {
+      console.error('Failed to fetch items:', err);
+    } finally {
       setIsLoading(false);
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, [activeTab]); // Trigger loading when tab changes
-
-  const handleDownload = (link) => {
-    // Navigate to Google Drive or download link
-    window.open(link, '_blank');
+    }
   };
 
-  const pyqs = [
-    { id: 1, subjectName: 'Data Structures', year: 2023, examType: 'End Semester', isApproved: true },
-    { id: 2, subjectName: 'Operating Systems', year: 2023, examType: 'Mid Semester', isApproved: true },
-    { id: 3, subjectName: 'Database Management', year: 2022, examType: 'End Semester', isApproved: true },
-    { id: 4, subjectName: 'Computer Networks', year: 2024, examType: 'Internal1', isApproved: false },
-    { id: 5, subjectName: 'Machine Learning', year: 2021, examType: 'End Semester', isApproved: true },
-  ];
+  useEffect(() => {
+    fetchItems();
+  }, []);
 
-  const notes = [
-    { id: 1, subjectName: 'Data Structures', year: 'Unit 1 & 2', examType: 'Notes', isApproved: true },
-    { id: 2, subjectName: 'Operating Systems', year: 'Full Syllabus', examType: 'Notes', isApproved: true },
-    { id: 3, subjectName: 'Computer Networks', year: 'Unit 3', examType: 'Notes', isApproved: false },
-  ];
+  // Filter based on active tab, filter type and search query
+  const filteredItems = items.filter(item => {
+    // 1. Filter by Segmented Control (pyqs -> PYQ, notes -> Notes)
+    const isPyqTab = activeTab === 'pyqs';
+    if (isPyqTab && item.examType === 'Notes') return false;
+    if (!isPyqTab && item.examType !== 'Notes') return false;
+    
+    // 2. Filter by search query
+    if (searchQuery && !item.subjectName.toLowerCase().includes(searchQuery.toLowerCase())) {
+      return false;
+    }
 
-  // Filter based on active tab
-  const filteredItems = activeTab === 'pyqs' 
-    ? pyqs 
-    : notes; // Notes don't currently have internal filtering tabs
+    // 3. Filter by horizontal tabs (if searching PYQs)
+    if (isPyqTab && activeFilter !== 'All') {
+      if (item.examType !== activeFilter) return false;
+    }
+
+    return true;
+  });
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden bg-bg relative">
@@ -273,13 +327,13 @@ const PYQsScreen = ({ onNavClick }) => {
       <div className="flex-1 overflow-y-auto px-4 pt-[60px] pb-6 scrollbar-hide bg-bg">
         <SegmentedControl active={activeTab} setActive={setActiveTab} />
         
-        <SearchBar />
+        <SearchBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
         
         {activeTab === 'pyqs' && (
           <HorizontalTabs 
             tabs={['All', 'End Semester', 'Mid Semester', 'Internal1', 'Internal2', 'Other']} 
-            activeTab={activeTab} 
-            setActiveTab={setActiveTab} 
+            activeTab={activeFilter} 
+            setActiveTab={setActiveFilter} 
           />
         )}
 
@@ -296,17 +350,18 @@ const PYQsScreen = ({ onNavClick }) => {
             <div className="mb-6">
               {filteredItems.map(item => (
                 <PYQCard
-                  key={item.id}
+                  key={item._id}
                   subjectName={item.subjectName}
                   year={item.year}
                   examType={item.examType}
                   isApproved={item.isApproved}
+                  questionPaperUrl={item.questionPaperUrl}
                 />
               ))}
             </div>
           )}
 
-          {filteredItems.length === 0 && (
+          {(!isLoading && filteredItems.length === 0) && (
             <div className="text-center text-text3 text-sm py-10">
               No files found.
             </div>
@@ -315,7 +370,11 @@ const PYQsScreen = ({ onNavClick }) => {
       </div>
       
       <UploadFloatingButton onClick={() => setIsModalOpen(true)} />
-      <UploadModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <UploadModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)}
+        onUploadSuccess={fetchItems}
+      />
     </div>
   );
 };

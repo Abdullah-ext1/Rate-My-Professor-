@@ -15,7 +15,7 @@ const pyqsSchema = new Schema({
   },
   examType: {
     type: String,
-    enum: ["End Semester", "Mid Semester", "Internal1", "Internal2", "Other"],
+    enum: ["End Semester", "Mid Semester", "Internal1", "Internal2", "Notes", "Other"],
     required: true
   },
   college: {

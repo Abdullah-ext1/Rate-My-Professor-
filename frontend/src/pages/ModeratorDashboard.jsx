@@ -1,45 +1,44 @@
 import React, { useState } from 'react';
+import { useEffect } from 'react';
+import api from '../context/api.js';
 
-// Mock data for pending submissions
-const MOCK_PENDING_SUBMISSIONS = [
-  {
-    _id: `pending_${Math.random().toString(36).substr(2, 9)}`,
-    title: 'Midterm 2023 - Data Structures',
-    subjectName: 'Data Structures',
-    year: 2023,
-    examType: 'Mid Semester',
-    fileUrl: 'https://drive.google.com/file/d/1A2B3C4D5E/view?usp=sharing',
-    type: 'PYQ', // or Note
-    submittedBy: 'Student203',
-    dateSubmitted: new Date(Date.now() - 86400000).toISOString()
-  },
-  {
-    _id: `pending_${Math.random().toString(36).substr(2, 9)}`,
-    title: 'Operating Systems Full Notes',
-    subjectName: 'Operating Systems',
-    year: 2024,
-    examType: 'End Semester',
-    fileUrl: 'https://drive.google.com/file/d/6F7G8H9I0J/view?usp=sharing',
-    type: 'Note',
-    submittedBy: 'AnonymousCoddler',
-    dateSubmitted: new Date(Date.now() - 3600000).toISOString()
-  }
-];
+const getTitle = (sub) => `${sub.subjectName} ${sub.year} - ${sub.examType}`
+const getType = (sub) => sub.examType === 'Notes' ? 'Note' : 'PYQ'
 
 export default function ModeratorDashboard({ onNavClick }) {
   const [activeTab, setActiveTab] = useState('pending'); // 'pending' | 'approved' | 'rejected'
-  const [submissions, setSubmissions] = useState(MOCK_PENDING_SUBMISSIONS);
+  const [submissions, setSubmissions] = useState([]);
   
-  const handleApprove = (id) => {
-    // In real app, make API call PUT /api/v1/pyqs/:id { isApproved: true }
-    setSubmissions(prev => prev.filter(sub => sub._id !== id));
-    // Show some success toast or just remove it from pending list
-  };
+  useEffect(() => {
+    const fetchSubmissions = async () => {
+      try {
+        const isApprovedStatus = activeTab === 'approved'
+        const res = await api.get(`/pyqs?isApproved=${isApprovedStatus}`)
+        setSubmissions(res.data.data)
+      } catch (err) {
+        console.error('Failed to fetch PYQs', err)
+      }
+    }
+    fetchSubmissions()
+  }, [activeTab])
 
-  const handleReject = (id) => {
-     // In real app, make API call DELETE /api/v1/pyqs/:id or mark as rejected
-    setSubmissions(prev => prev.filter(sub => sub._id !== id));
-  };
+  const handleApprove = async (id) => {
+    try {
+      await api.put(`/pyqs/${id}`, { isApproved: true })
+      setSubmissions(prev => prev.filter(sub => sub._id !== id))
+    } catch (err) {
+      console.error('Failed to approve', err)
+    }
+  }
+
+  const handleReject = async (id) => {
+    try {
+      await api.delete(`/pyqs/${id}`)
+      setSubmissions(prev => prev.filter(sub => sub._id !== id))
+    } catch (err) {
+      console.error('Failed to reject', err)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-bg text-text1 pb-20">
@@ -99,13 +98,13 @@ export default function ModeratorDashboard({ onNavClick }) {
                   <div>
                     <div className="flex items-center space-x-2 mb-1">
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
-                        sub.type === 'PYQ' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-green-500/10 text-green-400 border border-green-500/20'
+                        getType(sub) === 'PYQ' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-green-500/10 text-green-400 border border-green-500/20'
                       }`}>
-                        {sub.type}
+                        {getType(sub)}
                       </span>
-                      <span className="text-xs text-text3">• {new Date(sub.dateSubmitted).toLocaleDateString()}</span>
+                      <span className="text-xs text-text3">• {new Date(sub.createdAt).toLocaleDateString()}</span>
                     </div>
-                    <h3 className="font-semibold text-lg text-text1 leading-tight">{sub.title}</h3>
+                    <h3 className="font-semibold text-lg text-text1 leading-tight">{getTitle(sub)}</h3>
                   </div>
                 </div>
 
@@ -120,13 +119,13 @@ export default function ModeratorDashboard({ onNavClick }) {
                   </div>
                   <div className="col-span-2 mt-1">
                     <span className="text-text3 text-xs block mb-0.5">Submitted By</span>
-                    <span className="font-medium">{sub.submittedBy}</span>
+                    <span className="font-medium">{sub.owner.name}</span>
                   </div>
                 </div>
 
                 <div className="mb-4">
                   <a 
-                    href={sub.fileUrl} 
+                    href={sub.questionPaperUrl} 
                     target="_blank" 
                     rel="noreferrer" 
                     className="flex items-center text-sm text-primary-light hover:text-primary-mid transition-colors bg-primary-dark/10 p-2 rounded-lg border border-primary-dark/20 w-fit"
@@ -143,14 +142,16 @@ export default function ModeratorDashboard({ onNavClick }) {
                     onClick={() => handleReject(sub._id)}
                     className="flex-1 py-2 rounded-lg font-semibold text-sm border-2 border-red-500/20 text-red-500 hover:bg-red-500/10 transition-colors"
                   >
-                    Reject
+                    {activeTab === 'approved' ? 'Delete' : 'Reject'}
                   </button>
-                  <button 
-                    onClick={() => handleApprove(sub._id)}
-                    className="flex-1 py-2 rounded-lg font-semibold text-sm bg-primary-mid text-bg hover:bg-primary-light transition-colors shadow-lg shadow-primary-mid/20"
-                  >
-                    Approve
-                  </button>
+                  {activeTab === 'pending' && (
+                    <button 
+                      onClick={() => handleApprove(sub._id)}
+                      className="flex-1 py-2 rounded-lg font-semibold text-sm bg-primary-mid text-bg hover:bg-primary-light transition-colors shadow-lg shadow-primary-mid/20"
+                    >
+                      Approve
+                    </button>
+                  )}
                 </div>
               </div>
             ))

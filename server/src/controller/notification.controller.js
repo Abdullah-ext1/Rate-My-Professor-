@@ -38,7 +38,7 @@ const markAsRead = asyncHandler(async (req, res) => {
 })
 
 const getAllNotifications = asyncHandler(async (req, res) => {
-  const allNotification = await Notification.find({userId :req.user.id})
+  const allNotification = await Notification.find({userId :req.user.id}).populate('userId', 'name username').sort({createdAt: -1})
 
   return res
   .status(201)
