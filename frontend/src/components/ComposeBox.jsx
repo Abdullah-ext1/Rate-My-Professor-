@@ -38,6 +38,12 @@ const ComposeBox = ({ onPost }) => {
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handlePost();
+                }
+              }}
               placeholder="Title (optional)"
               className="text-sm font-semibold text-text bg-transparent border-none focus:outline-none placeholder:text-text3"
               autoFocus
@@ -46,9 +52,15 @@ const ComposeBox = ({ onPost }) => {
             <textarea 
               value={content}
               onChange={(e) => setContent(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handlePost();
+                }
+              }}
               placeholder="What's down there?"
               rows={3}
-              className="text-xs text-text bg-transparent border-none focus:outline-none placeholder:text-text3 resize-none w-full" 
+              className="text-xs text-text bg-transparent border-none focus:outline-none placeholder:text-text3 resize-none w-full"
             />
           </div>
         )}

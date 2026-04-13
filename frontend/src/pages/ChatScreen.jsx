@@ -223,6 +223,12 @@ const ChatScreen = ({ onNavClick }) => {
           <textarea
             value={input}
             onChange={e => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (input.trim()) handleSend();
+              }
+            }}
             placeholder="Message anonymously..."
             className="flex-1 bg-transparent border-none text-xs text-text placeholder-text3 outline-none resize-none min-h-5 max-h-20 font-dm"
             rows="1"

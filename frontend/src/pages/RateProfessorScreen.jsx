@@ -75,6 +75,24 @@ const RateProfessorScreen = ({ onNavClick }) => {
     setRating(val);
   };
 
+  const handleSubmit = async () => {
+    if (rating > 0 && review.trim().length > 0) {
+      try {
+        await api.post(
+          `/ratings/${professor.id}`,
+          {
+            rating,
+            comment: review,
+            tags: selectedTags,
+          },
+        );
+        onNavClick("professors");
+      } catch (error) {
+        console.error("Error submitting rating:", error);
+      }
+    }
+  };
+
   return (
     <div className="flex flex-col h-full bg-bg">
       <TopNav onNavClick={onNavClick} />
@@ -152,6 +170,12 @@ const RateProfessorScreen = ({ onNavClick }) => {
           <textarea
             value={review}
             onChange={(e) => setReview(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSubmit();
+              }
+            }}
             placeholder="What do you want other students to know about this professor?"
             className="w-full bg-bg3 border border-border rounded-2xl p-4 text-sm text-text placeholder-text3 min-h-[120px] resize-none outline-none focus:border-primary-mid transition-colors"
           />
@@ -159,23 +183,7 @@ const RateProfessorScreen = ({ onNavClick }) => {
 
         {/* Submit */}
         <button
-          onClick={async () => {
-            if (rating > 0 && review.trim().length > 0) {
-              try {
-                await api.post(
-                  `/ratings/${professor.id}`,
-                  {
-                    rating,
-                    comment: review,
-                  },
-                  { withCredentials: true },
-                );
-                onNavClick("professors");
-              } catch (error) {
-                console.error("Error submitting rating:", error);
-              }
-            }
-          }}
+          onClick={handleSubmit}
           className={`w-full py-3.5 rounded-full font-bold text-sm transition-colors ${
             rating > 0 && review.trim().length > 0
               ? "bg-primary text-white cursor-pointer hover:bg-primary-dark shadow-md shadow-primary/20"

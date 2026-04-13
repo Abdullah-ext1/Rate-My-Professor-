@@ -368,6 +368,12 @@ const PostScreen = ({ onNavClick, postData }) => {
             ref={inputRef}
             value={commentText}
             onChange={(e) => setCommentText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (commentText.trim()) handlePostComment();
+              }
+            }}
             placeholder={replyingTo ? "Write a reply..." : "Add a comment..."}
             className="flex-1 bg-transparent border-none text-sm text-text placeholder-text3 outline-none resize-none min-h-6 max-h-20 font-dm py-0.5"
             rows="1"
