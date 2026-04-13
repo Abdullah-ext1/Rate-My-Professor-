@@ -5,6 +5,10 @@ const notificationSchema = new Schema({
     type: Schema.Types.ObjectId, 
     ref: 'User', required: true
   },
+  senderId: {
+    type: Schema.Types.ObjectId, 
+    ref: 'User'
+  },
   type: {
     type: String,
     enum: ['message', 'comment', 'like', "announcement", "pyqApproved", "pyqRejected", 'other'],

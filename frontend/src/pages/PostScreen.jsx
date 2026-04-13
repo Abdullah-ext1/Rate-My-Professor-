@@ -160,18 +160,25 @@ const PostScreen = ({ onNavClick, postData }) => {
     }
   };
 
-  const confirmDelete = () => {
-    if (deleteConfig.type === 'reply') {
-      setComments(comments.map(c => {
-        if (c._id === deleteConfig.commentId) {
-          return { ...c, replies: c.replies.filter(r => r._id !== deleteConfig.replyId) };
-        }
-        return c;
-      }));
-    } else if (deleteConfig.type === 'comment') {
-      setComments(comments.filter(c => c._id !== deleteConfig.commentId));
-    } else if (deleteConfig.type === 'post') {
-      onNavClick('feed');
+  const confirmDelete = async () => {
+    try {
+      if (deleteConfig.type === 'reply') {
+        await api.delete(`/comments/${deleteConfig.replyId}`);
+        setComments(comments.map(c => {
+          if (c._id === deleteConfig.commentId) {
+            return { ...c, replies: c.replies.filter(r => r._id !== deleteConfig.replyId) };
+          }
+          return c;
+        }));
+      } else if (deleteConfig.type === 'comment') {
+        await api.delete(`/comments/${deleteConfig.commentId}`);
+        setComments(comments.filter(c => c._id !== deleteConfig.commentId));
+      } else if (deleteConfig.type === 'post') {
+        await api.delete(`/posts/${id}`);
+        onNavClick('feed');
+      }
+    } catch (error) {
+      console.error(`Error deleting ${deleteConfig.type}:`, error);
     }
   };
 
@@ -298,7 +305,7 @@ const PostScreen = ({ onNavClick, postData }) => {
                       </svg>
                       Reply
                     </span>
-                    {(currentUserRole === 'admin' || currentUserRole === 'moderator') && (
+                    {(currentUserRole === 'admin' || currentUserRole === 'moderator' || user?._id === comment.user?._id) && (
                       <span onClick={() => setDeleteConfig({ isOpen: true, type: 'comment', commentId: comment._id, replyId: null })} className="text-xs font-medium text-red-500/70 hover:text-red-500 cursor-pointer ml-auto">
                         Delete
                       </span>
@@ -331,7 +338,7 @@ const PostScreen = ({ onNavClick, postData }) => {
                             </svg>
                             Reply
                           </span>
-                          {(currentUserRole === 'admin' || currentUserRole === 'moderator') && (
+                          {(currentUserRole === 'admin' || currentUserRole === 'moderator' || user?._id === reply.user?._id) && (
                             <span onClick={() => setDeleteConfig({ isOpen: true, type: 'reply', commentId: comment._id, replyId: reply._id })} className="text-xs font-medium text-red-500/70 hover:text-red-500 cursor-pointer ml-auto">
                               Delete
                             </span>

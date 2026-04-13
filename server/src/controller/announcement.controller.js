@@ -25,6 +25,7 @@ const createAnnouncement = asyncHandler(async (req, res) => {
 
     const promise = users.map(user => createNotification({
         userId: user._id,
+        senderId: req.user.id,
         type: 'announcement',
         content: 'Alert! An announcement has been made',
         announcementType

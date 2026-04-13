@@ -14,7 +14,7 @@ const TopNav = ({ onNavClick }) => (
   </div>
 );
 
-const NotificationItem = ({ type, userId, content, createdAt, isRead }) => {
+const NotificationItem = ({ type, userId, senderId, content, createdAt, isRead, postId, onNavClick }) => {
   const getIcon = () => {
     if (type === 'like') {
       return (
@@ -60,15 +60,25 @@ const NotificationItem = ({ type, userId, content, createdAt, isRead }) => {
   };
 
   return (
-    <div className={`flex gap-3 p-4 border-b border-border ${!isRead ? 'bg-bg2' : 'bg-transparent'} hover:bg-bg3 cursor-pointer transition-colors`}>
+    <div
+      onClick={() => {
+        if (postId) {
+          onNavClick(`post/${postId}`);
+        }
+      }}
+      className={`flex gap-3 p-4 border-b border-border ${!isRead ? 'bg-bg2' : 'bg-transparent'} hover:bg-bg3 cursor-pointer transition-colors`}
+    >
       {getIcon()}
       <div className="flex-1">
         <div className="text-sm text-text mb-1">
-          {type === 'like' && <><span className="font-bold">{userId.name}</span> liked your post.</>}
-          {type === 'comment' && <><span className="font-bold">{userId.name}</span> commented on your post.</>}
-          {type === 'announcement' && <><span className="font-bold">{userId.name}</span> posted an announcement.</>}
+          {type === 'like' && <><span className="font-bold">{senderId?.name || "Someone"}</span> liked your post.</>}
+          {type === 'comment' && <><span className="font-bold">{senderId?.name || "Someone"}</span> commented on your post.</>}
+          {type === 'announcement' && <><span className="font-bold">{senderId?.name || "Admin"}</span> posted an announcement.</>}
           {(type === 'pyqApproved' || type === 'pyqRejected') && <span>{content}</span>}
         </div>
+        {type !== 'pyqApproved' && type !== 'pyqRejected' && (
+          <div className="text-sm text-text3 line-clamp-1">"{content}"</div>
+        )}
         <div className="text-xs text-text3 mt-1.5">{timeAgo(createdAt)}</div>
       </div>
     </div>
@@ -113,7 +123,7 @@ const NotificationScreen = ({ onNavClick }) => {
             </>
           ) : (
             notifications.map(notif => (
-              <NotificationItem key={notif._id} {...notif} />
+              <NotificationItem key={notif._id} {...notif} onNavClick={onNavClick} />
             ))
           )}
           {!isLoading && (

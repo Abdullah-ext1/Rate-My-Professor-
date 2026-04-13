@@ -72,9 +72,10 @@ const likeAPost = asyncHandler(async(req, res) => {
     {new: true}
   )
 
-  if(!alreadyLiked){
-      const notifcation = await createNotification({
+  if(!alreadyLiked && post.owner.toString() !== req.user.id.toString()){
+    const notifcation = await createNotification({
       userId: post.owner,
+      senderId: req.user.id,
       type: 'like',
       postId: post._id,
       content: 'Someone liked your post'
