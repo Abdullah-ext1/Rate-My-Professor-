@@ -3,6 +3,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js"
 import { User } from "../models/users.models.js";
 import { College } from "../models/college.models.js"
+import { createNotification } from "./notification.controller.js";
 
 const onboardingAuth = asyncHandler( async(req, res) => {
   const {college, department, year, username} = req.body;
@@ -200,7 +201,9 @@ const approvePendingUser = asyncHandler(async (req, res) => {
     console.log("No notification service set up for approvals yet, skipping...", e);
   }
 
-  return res.status(200).json(
+  return res
+  .status(200)
+  .json(
     new ApiResponse(200, user, "User approved successfully")
   );
 });
@@ -245,6 +248,37 @@ const getPendingUsers = asyncHandler(async (req, res) => {
   );
 });
 
+const getAllModerators = asyncHandler(async (req, res) => {
+  const moderators = await User.find({ role: 'moderator' }).populate('college', 'name');
+
+  return res.status(200).json(
+    new ApiResponse(200, moderators, "Fetched all moderators successfully")
+  );
+})
+
+const revokeModerator = asyncHandler(async (req, res) => {
+  const userId = req.params.userId;
+
+  const user = await User.findByIdAndUpdate(
+    userId,
+    { $set: { role: 'user' } },
+    { new: true }
+  ).populate('college', 'name');
+
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  const createNotificationForRevokedModerator = await createNotification({
+    userId: userId,
+    content: "Your moderator role has been revoked. You are now a regular user."
+  });
+
+  return res.status(200).json(
+    new ApiResponse(200, user, "Moderator role revoked successfully")
+  );
+})
+
 export {
   onboardingAuth,
   changeAccountDetails,
@@ -256,4 +290,6 @@ export {
   approvePendingUser,
   rejectPendingUser,
   getPendingUsers,
+  revokeModerator,
+  getAllModerators
 }

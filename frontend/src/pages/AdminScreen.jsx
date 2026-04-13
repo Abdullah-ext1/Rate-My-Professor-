@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import ConfirmModal from '../components/ConfirmModal';
 import api from '../context/api';
 import { useAuth } from '../context/AuthContext';
+import { timeAgo } from '../utils/timeAgo';
 
 const AdminScreen = ({ onNavClick, onBack }) => {
   const { user } = useAuth();
@@ -11,23 +12,29 @@ const AdminScreen = ({ onNavClick, onBack }) => {
   const [activeTab, setActiveTab] = useState('pending'); // 'pending' or 'moderators'
   const [pendingUsers, setPendingUsers] = useState([]);
   const [loading, setLoading] = useState(false);
+  // id name email role joinDate
 
   // Mock data for moderators
-  const [moderators, setModerators] = useState([
-    { id: 1, name: 'Alex Johnson', email: 'alex@college.edu', role: 'moderator', joinDate: 'Jan 15, 2024' },
-    { id: 2, name: 'Sarah Williams', email: 'swilliams@college.edu', role: 'moderator', joinDate: 'Feb 2, 2024' },
-    { id: 3, name: 'David Smith', email: 'dsmith@college.edu', role: 'moderator', joinDate: 'Mar 10, 2024' },
-  ]);
+  const [moderators, setModerators] = useState([]);
 
   const [selectedMod, setSelectedMod] = useState(null);
   const [confirmAction, setConfirmAction] = useState({ isOpen: false, modId: null });
 
   const handleRemoveMod = () => {
-    setModerators(prev => prev.filter(mod => mod.id !== confirmAction.modId));
-    setConfirmAction({ isOpen: false, modId: null });
-    if (selectedMod?.id === confirmAction.modId) {
-      setSelectedMod(null);
+    const modeRemoval = async () => {
+      try {
+        await api.put(`/auth/revoke-moderator/${confirmAction.modId}`);
+        setModerators(prev => prev.filter(mod => mod._id !== confirmAction.modId));
+        if (selectedMod?._id === confirmAction.modId) {
+          setSelectedMod(null)
+        }
+      } catch (error) {
+        console.error("Failed to revoke moderator status", error);
+      } finally {
+        setConfirmAction({ isOpen: false, modId: null });
+      }
     }
+    modeRemoval();
   };
 
   const fetchPendingUsers = async () => {
@@ -47,6 +54,21 @@ const AdminScreen = ({ onNavClick, onBack }) => {
       fetchPendingUsers();
     }
   }, [activeTab]);
+
+  const fetchModerators = async () => {
+    try {
+      const res = await api.get('/auth/moderators');
+      setModerators(res.data.data);
+    } catch (err) {
+      console.error("Error fetching moderators", err);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'moderators' && isAdmin) {
+      fetchModerators();
+    }
+  }, [activeTab, isAdmin]);
 
   const handleApprove = async (userId) => {
     try {
@@ -124,7 +146,7 @@ const AdminScreen = ({ onNavClick, onBack }) => {
             <div className="w-full bg-bg2 border border-border rounded-xl p-4 mt-8 flex flex-col gap-3">
               <div className="flex justify-between items-center border-b border-border pb-3">
                 <span className="text-sm text-text3">Joined</span>
-                <span className="text-sm font-medium text-text">{selectedMod.joinDate}</span>
+                <span className="text-sm font-medium text-text">{timeAgo(selectedMod.createdAt)}</span>
               </div>
               <div className="flex justify-between items-center border-b border-border pb-3">
                 <span className="text-sm text-text3">Actions Taken</span>
@@ -140,7 +162,7 @@ const AdminScreen = ({ onNavClick, onBack }) => {
             </div>
 
             <button 
-              onClick={() => setConfirmAction({ isOpen: true, modId: selectedMod.id })}
+              onClick={() => setConfirmAction({ isOpen: true, modId: selectedMod._id })}
               className="mt-8 w-full py-3.5 bg-red-500 bg-opacity-10 border border-red-500 text-red-500 rounded-xl font-semibold text-sm hover:bg-opacity-20 transition-all flex justify-center items-center gap-2"
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18">
@@ -159,7 +181,7 @@ const AdminScreen = ({ onNavClick, onBack }) => {
             ) : (
               moderators.map((mod) => (
                 <div 
-                  key={mod.id} 
+                  key={mod._id} 
                   onClick={() => setSelectedMod(mod)}
                   className="bg-bg2 border border-border rounded-xl p-4 flex items-center justify-between cursor-pointer hover:border-primary transition-colors"
                 >
