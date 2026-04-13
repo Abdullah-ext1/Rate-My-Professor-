@@ -38,7 +38,7 @@ const AppLayout = () => {
     if (screen === 'post' && data) {
       setSelectedPost(data);
     }
-    navigate(`/${screen}`);
+    navigate(`/${screen}`, { state: { professor: data } });
   };
 
   const currentScreen = location.pathname.slice(1) || 'feed';

@@ -1,65 +1,33 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import api from '../context/api.js';
 
 const ProfessorReviewsScreen = ({ professor, onBack, currentUserRole, onDelete }) => {
-  const [reviews, setReviews] = useState([
-    {
-      id: 1,
-      rating: 5,
-      title: 'Excellent Teacher',
-      content: 'Prof Patil is an amazing teacher. He explains concepts very clearly and is always ready to help. His lectures are engaging and he makes complex topics easy to understand.',
-      difficulty: 'Easy',
-      wouldTakeAgain: true,
-      helpful: 156,
-      unhelpful: 8,
-      date: '2 weeks ago',
-      userVote: null
-    },
-    {
-      id: 2,
-      rating: 4,
-      title: 'Good but Fast Paced',
-      content: 'Great teacher but moves through the curriculum pretty quickly. If you keep up with the assignments you\'ll be fine. The exams are fair and match the lecture content.',
-      difficulty: 'Medium',
-      wouldTakeAgain: true,
-      helpful: 89,
-      unhelpful: 5,
-      date: '1 month ago',
-      userVote: null
-    },
-    {
-      id: 3,
-      rating: 5,
-      title: 'Best Professor',
-      content: 'One of the best professors I\'ve had. Very knowledgeable and passionate about the subject. He encourages class participation and makes everyone feel comfortable asking questions.',
-      difficulty: 'Easy',
-      wouldTakeAgain: true,
-      helpful: 234,
-      unhelpful: 12,
-      date: '1 month ago'
-    },
-    {
-      id: 4,
-      rating: 3,
-      title: 'Average',
-      content: 'Decent professor. Lectures are okay but sometimes hard to follow. The course material is interesting but the grading seems a bit harsh on exams.',
-      difficulty: 'Hard',
-      wouldTakeAgain: false,
-      helpful: 45,
-      unhelpful: 32,
-      date: '2 months ago'
-    },
-    {
-      id: 5,
-      rating: 4,
-      title: 'Very Helpful Office Hours',
-      content: 'The lectures are good but I really appreciated the office hours. Prof Patil takes time to work through problems with you individually. Highly recommend attending them.',
-      difficulty: 'Medium',
-      wouldTakeAgain: true,
-      helpful: 178,
-      unhelpful: 9,
-      date: '2 months ago'
-    },
-  ]);
+ const [reviews, setReviews] = useState([]);
+const [isLoading, setIsLoading] = useState(true);
+
+useEffect(() => {
+  const fetchRatings = async () => {
+    try {
+      const res = await api.get(`/ratings/${professor.id}`, { withCredentials: true })
+      const mapped = res.data.data.ratings.map(r => ({
+        id: r._id,
+        rating: r.rating,
+        title: 'Review',
+        content: r.comment,
+        date: new Date(r.createdAt).toLocaleDateString(),
+        helpful: 0,
+        unhelpful: 0,
+        userVote: null
+      }))
+      setReviews(mapped)
+    } catch (error) {
+      console.error("Error fetching ratings:", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+  fetchRatings()
+}, [professor.id])
 
   const [filterRating, setFilterRating] = useState(null);
 

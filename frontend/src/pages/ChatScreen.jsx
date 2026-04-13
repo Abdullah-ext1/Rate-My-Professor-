@@ -1,11 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
 import ConfirmModal from '../components/ConfirmModal';
+import { io } from 'socket.io-client';
+import api from '../context/api.js';
+import { useAuth } from '../context/AuthContext';
+
 
 const ChatScreen = ({ onNavClick }) => {
-  const [messages, setMessages] = useState([
-    { id: 1, sender: 'prof', content: 'Anyone know if Prof Patil is taking DS extra lectures this week?' },
-    { id: 2, sender: 'other', content: 'Yes! Fri 4pm in lab 3. He announced it last class.' },
-  ]);
+  const [messages, setMessages] = useState([]);
+  const socketRef = useRef(null);
   const [input, setInput] = useState('');
   const messagesEndRef = useRef(null);
 
@@ -20,13 +22,37 @@ const ChatScreen = ({ onNavClick }) => {
   };
 
   useEffect(() => {
+  const fetchMessages = async () => {
+    try {
+      const res = await api.get('/messages', { withCredentials: true })
+      setMessages(res.data.data.reverse())
+    } catch (error) {
+      console.error("Error fetching messages:", error)
+    }
+  }
+  fetchMessages()
+
+  socketRef.current = io('http://localhost:9000', {
+    withCredentials: true
+  })
+
+  socketRef.current.on('message', (newMessage) => {
+    setMessages(prev => [...prev, newMessage])
+  })
+
+  return () => {
+    socketRef.current.disconnect()
+  }
+}, [])
+
+  useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
   const handleSend = () => {
     if (input.trim()) {
-      setMessages([...messages, { id: messages.length + 1, sender: 'me', content: input }]);
-      setInput('');
+    socketRef.current.emit('sendMessage', { content: input })
+    setInput('')
     }
   };
 

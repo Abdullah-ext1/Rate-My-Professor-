@@ -5,8 +5,9 @@ import { ApiError } from "../utils/ApiError.js"
 const socketAuth = async (socket, next) => {
 
   try {
-    const token = socket.handshake.auth?.token || socket.handshake.headers?.authorization?.replace("Bearer ", "")
-
+const token = socket.handshake.auth?.token 
+  || socket.handshake.headers?.authorization?.replace("Bearer ", "")
+  || socket.handshake.headers?.cookie?.split('accessToken=')?.[1]?.split(';')?.[0]
     if (!token) {
       throw new ApiError(401, "Token generation was unsucessfull")
     }

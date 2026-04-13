@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { LeaderboardItemSkeleton } from '../components/Skeleton';
+import api from '../context/api.js';
 
 const TopNav = ({ onNavClick }) => (
   <div className="fixed top-0 left-0 right-0 bg-bg px-4 py-2.5 flex items-center gap-3 flex-shrink-0 border-b border-border z-30">
@@ -45,23 +46,28 @@ const LeaderboardScreen = ({ onNavClick }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [professors, setProfessors] = useState([]);
 
-  useEffect(() => {
-    const fetchLeaderboard = async () => {
-      setIsLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      setProfessors([
-        { id: 1, initials: 'AP', name: 'Prof. A. Patil', subject: 'Data Structures', rating: '4.7', reviews: '102' },
-        { id: 2, initials: 'VM', name: 'Prof. V. Mehta', subject: 'Database Management', rating: '4.2', reviews: '84' },
-        { id: 3, initials: 'NK', name: 'Prof. N. Kumar', subject: 'Theory of Computation', rating: '3.8', reviews: '65' },
-        { id: 4, initials: 'SR', name: 'Prof. S. Rao', subject: 'Operating Systems', rating: '2.9', reviews: '112' },
-      ]);
-      
-      setIsLoading(false);
-    };
-
-    fetchLeaderboard();
-  }, []);
+useEffect(() => {
+  const fetchLeaderboard = async () => {
+    setIsLoading(true)
+    try {
+      const res = await api.get("/leaderboard", { withCredentials: true })
+      const mapped = res.data.data.map(item => ({
+        id: item._id,
+        name: item.professorDetails[0]?.name || 'Unknown',
+        initials: (item.professorDetails[0]?.name || 'UN').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase(),
+        subject: item.professorDetails[0]?.subjects?.join(', ') || '',
+        rating: item.averageRating.toFixed(1),
+        reviews: item.totalRatings
+      }))
+      setProfessors(mapped)
+    } catch (error) {
+      console.error("Error fetching leaderboard:", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+  fetchLeaderboard()
+}, []);
 
   return (
     <div className="flex flex-col h-full bg-bg">
