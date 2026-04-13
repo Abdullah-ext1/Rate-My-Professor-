@@ -2,6 +2,7 @@ import {ApiError} from '../utils/ApiError.js';
 import {ApiResponse} from '../utils/ApiResponse.js';
 import {PYQ} from '../models/pyqs.models.js';
 import {asyncHandler} from '../utils/asyncHandler.js';
+import { createNotification } from './notification.controller.js';
 
 const uploadPYQ = asyncHandler(async (req, res) => {
   const {subjectName, year, questionPaperUrl, examType} = req.body
