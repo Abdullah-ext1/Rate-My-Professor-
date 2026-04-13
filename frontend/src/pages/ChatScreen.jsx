@@ -6,7 +6,9 @@ import { useAuth } from '../context/AuthContext';
 
 
 const ChatScreen = ({ onNavClick }) => {
+  const { user } = useAuth();
   const [messages, setMessages] = useState([]);
+  const [onlineCount, setOnlineCount] = useState(0);
   const socketRef = useRef(null);
   const [input, setInput] = useState('');
   const messagesEndRef = useRef(null);
@@ -40,6 +42,10 @@ const ChatScreen = ({ onNavClick }) => {
     setMessages(prev => [...prev, newMessage])
   })
 
+  socketRef.current.on('onlineUsers', (users) => {
+    setOnlineCount(users.length)
+  })
+
   return () => {
     socketRef.current.disconnect()
   }
@@ -59,20 +65,20 @@ const ChatScreen = ({ onNavClick }) => {
   const handleConfirmAction = () => {
     const { action, targetId } = confirmAction;
     if (action === 'delete') {
-      setMessages(messages.filter(m => m.id !== targetId));
+      setMessages(messages.filter(m => m._id !== targetId));
     } else if (action === 'suspend') {
       alert('Suspended user for 15 days');
     } else if (action === 'ban') {
       alert('User permanently banned');
     } else if (action === 'mod') {
       setMessages(prev => prev.map(m => 
-        m.id === targetId 
+        m._id === targetId 
           ? {...m, senderDetails: {...(m.senderDetails || {}), role: 'moderator'}}
           : m
       ));
     } else if (action === 'remove_mod') {
       setMessages(prev => prev.map(m => 
-        m.id === targetId 
+        m._id === targetId 
           ? {...m, senderDetails: {...(m.senderDetails || {}), role: 'user'}}
           : m
       ));
@@ -124,7 +130,7 @@ const ChatScreen = ({ onNavClick }) => {
         </div>
         <div className="flex items-center gap-1 bg-opacity-10 bg-accent-teal border border-opacity-20 border-accent-teal rounded-full px-2.5 py-1.5">
           <div className="w-1 h-1 rounded-full bg-accent-teal animate-pulse"></div>
-          <span className="text-xs text-accent-teal font-medium">847 online</span>
+          <span className="text-xs text-accent-teal font-medium">{onlineCount} online</span>
         </div>
       </div>
 
@@ -136,28 +142,28 @@ const ChatScreen = ({ onNavClick }) => {
         </div>
 
         {messages.map(msg => (
-          <div key={msg.id} className={`flex gap-2 ${msg.sender === 'me' ? 'flex-row-reverse' : ''}`}>
+          <div key={msg._id} className={`flex gap-2 ${msg.sender._id === user?._id ? 'flex-row-reverse' : ''}`}>
             <div className="w-7 h-7 rounded-2 bg-opacity-25 bg-primary flex items-center justify-center text-xs font-semibold text-primary-mid flex-shrink-0 font-syne">
-              {msg.sender === 'me' ? 'ME' : 'RZ'}
+              {msg.sender._id === user?._id ? 'ME' : msg.sender.name?.substring(0, 2).toUpperCase() || 'U'}
             </div>
-            <div className={`flex-1 flex flex-col relative ${msg.sender === 'me' ? 'items-end' : 'items-start'}`}>
-              <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => setActiveMessageId(activeMessageId === msg.id ? null : msg.id)}>
-                <span className="text-xs font-medium text-text2">{msg.sender === 'me' ? 'you' : 'Anonymous'}</span>
-                <span className="text-xs px-1.5 py-0.5 rounded-lg border border-opacity-30 border-primary bg-opacity-10 bg-primary text-primary-mid font-medium">{msg.sender === 'me' ? 'rizvi' : 'rizvi'}</span>
-                <span className="text-xs text-text3">9:{21 + messages.indexOf(msg)} AM</span>
-                {msg.sender !== 'me' && (currentUserRole === 'admin' || currentUserRole === 'moderator') && (
+            <div className={`flex-1 flex flex-col relative ${msg.sender._id === user?._id ? 'items-end' : 'items-start'}`}>
+              <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => setActiveMessageId(activeMessageId === msg._id ? null : msg._id)}>
+                <span className="text-xs font-medium text-text2">{msg.sender._id === user?._id ? 'you' : 'Anonymous'}</span>
+                <span className="text-xs px-1.5 py-0.5 rounded-lg border border-opacity-30 border-primary bg-opacity-10 bg-primary text-primary-mid font-medium">{msg.sender._id === user?._id ? 'rizvi' : 'rizvi'}</span>
+                <span className="text-xs text-text3">{new Date(msg.createdAt).toLocaleTimeString()}</span>
+                {msg.sender._id !== user?._id && (currentUserRole === 'admin' || currentUserRole === 'moderator') && (
                    <span className="text-text3 text-xs ml-1 px-1 hover:text-text transition-colors">•••</span>
                 )}
               </div>
-              <div className={`text-xs mt-1.5 px-3 py-2 rounded-2.5 ${msg.sender === 'me' ? 'bg-opacity-15 bg-primary border border-opacity-30 border-primary text-text' : 'bg-bg2 border border-border text-text'}`}>
+              <div className={`text-xs mt-1.5 px-3 py-2 rounded-2.5 ${msg.sender._id === user?._id ? 'bg-opacity-15 bg-primary border border-opacity-30 border-primary text-text' : 'bg-bg2 border border-border text-text'}`}>
                 {msg.content}
               </div>
 
               {/* Moderation Dropdown */}
-              {activeMessageId === msg.id && msg.sender !== 'me' && (
+              {activeMessageId === msg._id && msg.sender._id !== user?._id && (
                 <div className="absolute top-6 left-0 z-50 bg-bg2 border border-border rounded-xl shadow-lg p-1 w-40 flex flex-col gap-1">
                    <button 
-                     onClick={() => openConfirm('delete', msg.id, "Delete Message", "Are you sure you want to delete this message?", "Delete")}
+                     onClick={() => openConfirm('delete', msg._id, "Delete Message", "Are you sure you want to delete this message?", "Delete")}
                      className="text-left px-3 py-2 text-xs font-medium text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
                    >
                      Delete Message
@@ -176,7 +182,7 @@ const ChatScreen = ({ onNavClick }) => {
                          <button 
                            onClick={() => {
                              setActiveMessageId(null);
-                             openConfirmModal('mod', msg.id);
+                             openConfirmModal('mod', msg._id);
                            }}
                            className="w-full text-left px-3 py-1.5 text-xs text-blue-400 hover:bg-hover active:bg-divider transition-colors flex items-center gap-2"
                          >
@@ -189,7 +195,7 @@ const ChatScreen = ({ onNavClick }) => {
                          <button 
                            onClick={() => {
                              setActiveMessageId(null);
-                             openConfirmModal('remove_mod', msg.id);
+                             openConfirmModal('remove_mod', msg._id);
                            }}
                            className="w-full text-left px-3 py-1.5 text-xs text-orange-400 hover:bg-hover active:bg-divider transition-colors flex items-center gap-2"
                          >

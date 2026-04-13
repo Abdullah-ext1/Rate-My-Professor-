@@ -22,7 +22,8 @@ export function initChat(io) {
           college: socket.user.college,
           content: data.content,
         })
-        io.emit("message", message)
+        const populatedMessage = await message.populate("sender", "name avatar _id")
+        io.emit("message", populatedMessage)
       } catch (error) {
         socket.emit("error", { message: "Failed to send message" })
       }
