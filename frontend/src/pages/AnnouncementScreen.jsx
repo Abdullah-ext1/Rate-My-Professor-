@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import ConfirmModal from "../components/ConfirmModal";
-import PhoneFrame from "../components/PhoneFrame";
+import api from "../context/api.js";
 import { Link } from "react-router-dom";
 import { AnnouncementSkeleton } from "../components/Skeleton";
 import AnnouncementCard from "../components/AnnouncementCard";
+import { useAuth } from "../context/AuthContext.jsx";
 
 const AnnouncementScreen = ({ onNavClick }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -13,68 +14,58 @@ const AnnouncementScreen = ({ onNavClick }) => {
   const [type, setType] = useState("Important");
   const [activeTab, setActiveTab] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth()
 
   // Mock current user role for testing UI (can be 'user', 'moderator', or 'admin')
-  const currentUserRole = "admin";
+  const currentUserRole = user?.role;
+  // id, title, content, author, date, type (Important/Event/General)
 
-  const [announcements, setAnnouncements] = useState([
-    {
-      id: 1,
-      title: "End Semester Exams Schedule",
-      content:
-        "The timetable for the upcoming end semester examinations has been uploaded. Exams will commence from April 14th. Please check the college portal for detailed subject-wise breakdown.",
-      author: "Examination Cell",
-      date: "Today, 9:00 AM",
-      type: "Important",
-    },
-    {
-      id: 2,
-      title: "Tech Fest 2026 Registration Open",
-      content:
-        "Registrations for the annual Tech Fest are now officially open! Participate in coding challenges, hackathons, and gaming tournaments. Early bird registration ends this Friday.",
-      author: "Student Council",
-      date: "Yesterday, 2:30 PM",
-      type: "Event",
-    },
-    {
-      id: 3,
-      title: "Library Maintenance Notice",
-      content:
-        "The central library will remain closed this Saturday from 10:00 AM to 4:00 PM for system maintenance and catalog updates.",
-      author: "Chief Librarian",
-      date: "April 2nd, 11:15 AM",
-      type: "General",
-    },
-  ]);
+  const [announcements, setAnnouncements] = useState([]);
 
   useEffect(() => {
-    // Simulate API fetch delay
-    setIsLoading(true);
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1500);
-    return () => clearTimeout(timer);
+    const fetchAnnoucement = async () => {
+      try {
+        const res = await api.get("/announcements/all")
+        setAnnouncements(res.data.data)
+      } catch (error) {
+        console.log("Error while getting the annoucements", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchAnnoucement();
   }, [activeTab]); // Trigger loading when tab changes
 
   const filteredAnnouncements = announcements.filter((a) =>
     activeTab === "all" ? true : a.type === activeTab
   );
 
-  const handleCreate = () => {
-    if (!title || !content) return;
-    const newAnnouncement = {
-      id: Date.now(),
-      title,
-      content,
-      author: currentUserRole === "admin" ? "Admin" : "Moderator",
-      date: "Just now",
-      type,
-    };
-    setAnnouncements([newAnnouncement, ...announcements]);
-    setIsModalOpen(false);
-    setTitle("");
-    setContent("");
+  const handleCreate = async () => {
+    try {
+      const res = await api.post("/announcements/create", {
+        title,
+        content,
+        announcementType: type
+      })
+      setAnnouncements([res.data.data, ...announcements]); 
+      setIsModalOpen(false)
+      setTitle("")
+      setContent("")
+    } catch (error) {
+      console.log("Error while creating the announcement", error)
+    }
   };
+
+  const handleDelete = async () => {
+    try {
+      await api.delete(`/announcements/${deleteId}`)
+      setAnnouncements(announcements.filter(a => a._id !== deleteId))
+    } catch (error) {
+      console.log("Error while deleting the announcement", error)
+    } finally {
+      setDeleteId(null)
+    }
+  }
 
   const getTypeStyle = (type) => {
     switch (type) {
@@ -149,7 +140,7 @@ const AnnouncementScreen = ({ onNavClick }) => {
             ) : filteredAnnouncements.length > 0 ? (
               filteredAnnouncements.map((announcement) => (
                 <AnnouncementCard 
-                  key={announcement.id}
+                  key={announcement._id}
                   announcement={announcement}
                   currentUserRole={currentUserRole}
                   onStyleType={getTypeStyle}
@@ -311,9 +302,7 @@ const AnnouncementScreen = ({ onNavClick }) => {
       <ConfirmModal
         isOpen={!!deleteId}
         onClose={() => setDeleteId(null)}
-        onConfirm={() =>
-          setAnnouncements(announcements.filter((a) => a.id !== deleteId))
-        }
+        onConfirm={handleDelete}
         title="Delete Announcement"
         message="Are you sure you want to delete this announcement? This action cannot be undone."
       />

@@ -6,10 +6,10 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { createNotification } from "./notification.controller.js";
 
 const createAnnouncement = asyncHandler(async (req, res) => {
-    const { title, content } = req.body;
+    const { title, content, announcementType } = req.body;
 
-    if (!title || !content) {
-        throw new ApiError(401, "All feilds is Mandatory")
+    if (!title || !content || !announcementType) {
+        throw new ApiError(400, "All feilds is Mandatory")
     }
 
     const annnouncementPost = await Post.create({
@@ -17,7 +17,8 @@ const createAnnouncement = asyncHandler(async (req, res) => {
         content,
         owner: req.user._id,
         college: req.user.college,
-        isAnnouncement: true
+        isAnnouncement: true,
+        announcementType
     })
 
     const users = await User.find({ college: req.user.college })
@@ -25,7 +26,8 @@ const createAnnouncement = asyncHandler(async (req, res) => {
     const promise = users.map(user => createNotification({
         userId: user._id,
         type: 'announcement',
-        content: 'Alert! An announcement has been made'
+        content: 'Alert! An announcement has been made',
+        announcementType
     }))
 
     await Promise.all(promise)
@@ -50,7 +52,7 @@ const getAllAnnouncements = asyncHandler(async (req, res) => {
         .status(200)
         .json(
             new ApiResponse(    
-                201,
+                200,
                 announcements,
                 "Announcements fetched successfully"
             )
@@ -66,11 +68,15 @@ const deleteAnnouncement = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Announcement not found");
     }
 
-    if (announcement.owner.toString() !== req.user._id.toString()) {
-        throw new ApiError(403, "You are not authorized to delete this announcement");
+    const isOwner = announcement.owner.toString() === req.user.id.toString()
+    const isModerator = req.user.role === "moderator"
+    const isAdmin = req.user.role === "admin"
+
+    if(!isOwner && !isModerator && !isAdmin){
+        throw new ApiError(403, "Not authorized to delete this post")
     }
 
-    await announcement.remove();
+    await announcement.deleteOne();
 
     return res
         .status(200)

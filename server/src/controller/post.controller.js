@@ -40,7 +40,10 @@ const getPosts = asyncHandler(async( req, res ) => {
   const limit = Number(req.query.limit) || 10 // default to 10 posts per page if not provided
   const skip = (page - 1) * limit // calculate the number of posts to skip based on the current page and limit
 
-  const filter = req.user.role === 'admin' ? {} : { college: req.user.college }
+  // if else between admin and user
+  const filter ={
+    isAnnouncement: false, 
+    ...req.user.role === 'admin' ? {} : { college: req.user.college }}
   const posts = await Post.find(filter)
     .populate('owner', 'name')
     .sort({ createdAt: -1 }) // Makes sure newest posts appear first
@@ -117,17 +120,16 @@ const getPostById = asyncHandler(async (req, res) => {
   if(!postId){
     throw new ApiError(401, "Post Id is neccessarry")
   }
-
-  const postSearch = await Post.findById(postId)
-  if(!postSearch){
-    throw new ApiError(401, "Post with this Id dosen't exists")
-  }
   
   const post = await Post.findByIdAndUpdate(postId, {
     $inc: {views: 1},
   }, {new: true})
     .populate("owner", "name")
     .select("+likes +comments +tags +createdAt +updatedAt")
+
+  if(!post){
+    throw new ApiError(404, "Post not found")
+  }
 
   return res
   .status(201)
@@ -145,6 +147,7 @@ const getTrendingPosts = asyncHandler(async (req, res) => {
     // $sort — sort by likesCount descending
 
     { $match: { 
+      isAnnouncement: false, 
       ...getCollegeFilter(req.user),
       createdAt: { $gte: twentyFourHoursAgo } 
     }},

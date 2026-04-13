@@ -41,7 +41,11 @@ const postSchema = new Schema({
   isAnnouncement: {
     type: Boolean,
     default: false
-  }
+  },
+  announcementType: {
+    type: String,
+    enum: ["Important", "Event", "General"],
+  },
 }, {timestamps: true});
 
 postSchema.index({ createdAt: 1 }, { expireAfterSeconds: 2592000 });
