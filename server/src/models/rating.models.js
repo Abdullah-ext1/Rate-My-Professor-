@@ -24,6 +24,6 @@ const ratingSchema = new Schema({
 }, { timestamps: true });
 
 
-ratingSchema.index({ professor: 1, student: 1 }, { unique: true });
+ratingSchema.index({ professor: 1, user: 1 }, { unique: true });
 
 export const Rating = mongoose.model('Rating', ratingSchema);

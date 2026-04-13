@@ -1,6 +1,7 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { Rating } from "../models/rating.models.js";
+import mongoose from "mongoose";
 
 const getLeaderboard = asyncHandler(async (req, res) => {
     const leaderboard = await Rating.aggregate([

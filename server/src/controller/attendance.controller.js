@@ -57,7 +57,7 @@ const markAttendance = asyncHandler(async (req, res) => {
 })
 
 const getAttendance = asyncHandler(async (req, res) => {
-    const attendance = await Attendance.find({ user: req.user._id })
+    const attendance = await Attendance.find({ user: req.user._id }).populate("professor", "name")
 
     return res
         .status(200)
