@@ -3,11 +3,14 @@ import mongoose from 'mongoose';
 const professorSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: true
+    required: true,
+    index: true
   },
   department: {
     type: String,
-    required: true
+    required: true,
+    trim: true,
+    index: true
   },
   subjects: {
     type: [String],
@@ -16,9 +19,14 @@ const professorSchema = new mongoose.Schema({
   college: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'College',
-    required: true
+    required: true,
+    index: true
   },
   
 }, { timestamps: true });
+
+professorSchema.index({ name: 1, college: 1 }, { unique: true }
+);
+
 
 export const Professor = mongoose.model('Professor', professorSchema);  
