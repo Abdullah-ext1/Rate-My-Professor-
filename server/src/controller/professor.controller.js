@@ -14,7 +14,9 @@ const addProfessor = asyncHandler(async (req, res) => {
         name: name,
         department,
         subjects,
-        college: req.user.college
+        college: req.user.college,
+        addedBy: req.user._id,
+        isApproved: req.user.role === 'admin' ? true : false
     })
 
     return res
@@ -35,7 +37,45 @@ const getProfessor = asyncHandler(async (req, res) => {
     const limit = Number(req.query.limit) || 10
     const skip = (page - 1) * limit
 
-    const professor = await Professor.find(getCollegeFilter(req.user)).skip(skip).limit(limit)
+    const filter = getCollegeFilter(req.user)
+    if (req.user.role !== 'admin') {
+        filter.isApproved = true;
+    } else {
+        if (req.query.isApproved !== undefined) {
+            filter.isApproved = req.query.isApproved === 'true';
+        }
+    }
+
+    const professor = await Professor.aggregate([
+        { $match: filter },
+        {
+            $lookup: {
+                from: "ratings",
+                localField: "_id",
+                foreignField: "professor",
+                as: "ratings"
+            }
+        },
+        {
+            $addFields: {
+                averageRating: {
+                    $cond: {
+                        if: { $gt: [{ $size: "$ratings" }, 0] },
+                        then: { $avg: "$ratings.rating" },
+                        else: 0
+                    }
+                },
+                totalReviews: { $size: "$ratings" }
+            }
+        },
+        {
+            $project: {
+                ratings: 0
+            }
+        },
+        { $skip: skip },
+        { $limit: limit }
+    ]);
 
     return res
         .status(200)
@@ -44,9 +84,37 @@ const getProfessor = asyncHandler(async (req, res) => {
                 200,
                 professor,
                 "get all professor successfully"
-
             )
         )
+})
+
+const moderateProfessor = asyncHandler(async (req, res) => {
+    const professorId = req.params.id;
+    const { isApproved } = req.body;
+
+    if (isApproved === undefined) {
+        throw new ApiError(400, "isApproved field is required");
+    }
+
+    const prof = await Professor.findByIdAndUpdate(
+        professorId,
+        { $set: { isApproved } },
+        { new: true }
+    );
+
+    if (!prof) {
+        throw new ApiError(404, "Professor not found");
+    }
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                prof,
+                "Professor moderated successfully"
+            )
+        );
 })
 
 const getProfessorById = asyncHandler(async (req, res) => {
@@ -80,12 +148,47 @@ const searchProfessor = asyncHandler(async (req, res) => {
         throw new ApiError(403, "Professor Not found")
     }
 
-    const search = await Professor.find({
+    const filter = {
         name: { $regex: name, $options: "i" },
         ...getCollegeFilter(req.user)
-    }).select("name department subjects")
+    }
 
+    if (req.user.role !== 'admin') {
+        filter.isApproved = true;
+    } else {
+        if (req.query.isApproved !== undefined) {
+            filter.isApproved = req.query.isApproved === 'true';
+        }
+    }
 
+    const search = await Professor.aggregate([
+        { $match: filter },
+        {
+            $lookup: {
+                from: "ratings",
+                localField: "_id",
+                foreignField: "professor",
+                as: "ratings"
+            }
+        },
+        {
+            $addFields: {
+                averageRating: {
+                    $cond: {
+                        if: { $gt: [{ $size: "$ratings" }, 0] },
+                        then: { $avg: "$ratings.rating" },
+                        else: 0
+                    }
+                },
+                totalReviews: { $size: "$ratings" }
+            }
+        },
+        {
+            $project: {
+                ratings: 0
+            }
+        }
+    ]);
 
     return res
         .status(200)
@@ -123,5 +226,6 @@ export {
     getProfessor,
     searchProfessor,
     getProfessorById,
-    deleteProfessor
+    deleteProfessor,
+    moderateProfessor
 }

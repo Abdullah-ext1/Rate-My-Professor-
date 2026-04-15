@@ -9,8 +9,9 @@ const AdminScreen = ({ onNavClick, onBack }) => {
   const isAdmin = user?.role === 'admin';
   const isModerator = user?.role === 'moderator' || isAdmin;
 
-  const [activeTab, setActiveTab] = useState('pending'); // 'pending' or 'moderators'
+  const [activeTab, setActiveTab] = useState('pending'); // 'pending' | 'moderators' | 'professors'
   const [pendingUsers, setPendingUsers] = useState([]);
+  const [pendingProfessors, setPendingProfessors] = useState([]);
   const [loading, setLoading] = useState(false);
   // id name email role joinDate
 
@@ -70,6 +71,24 @@ const AdminScreen = ({ onNavClick, onBack }) => {
     }
   }, [activeTab, isAdmin]);
 
+  const fetchPendingProfessors = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get('/professor?isApproved=false');
+      setPendingProfessors(res.data.data);
+    } catch (err) {
+      console.error("Error fetching pending professors", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'professors' && isAdmin) {
+      fetchPendingProfessors();
+    }
+  }, [activeTab, isAdmin]);
+
   const handleApprove = async (userId) => {
     try {
       await api.put(`/auth/approve/${userId}`);
@@ -83,6 +102,24 @@ const AdminScreen = ({ onNavClick, onBack }) => {
     try {
       await api.put(`/auth/reject/${userId}`, { reason: "Did not meet criteria." });
       setPendingUsers(prev => prev.filter(u => u._id !== userId));
+    } catch (err) {
+      console.error("Rejection failed", err);
+    }
+  };
+
+  const handleApproveProfessor = async (profId) => {
+    try {
+      await api.put(`/professor/${profId}/moderate`, { isApproved: true });
+      setPendingProfessors(prev => prev.filter(p => p._id !== profId));
+    } catch (err) {
+      console.error("Approval failed", err);
+    }
+  };
+
+  const handleRejectProfessor = async (profId) => {
+    try {
+      await api.delete(`/professor/${profId}`);
+      setPendingProfessors(prev => prev.filter(p => p._id !== profId));
     } catch (err) {
       console.error("Rejection failed", err);
     }
@@ -111,21 +148,29 @@ const AdminScreen = ({ onNavClick, onBack }) => {
       </div>
 
       {!selectedMod && (
-        <div className="flex border-b border-border bg-bg">
+        <div className="flex border-b border-border bg-bg overflow-x-auto scrollbar-hide shrink-0">
           <button 
-            className={`flex-1 py-3 text-sm font-medium ${activeTab === 'pending' ? 'text-primary border-b-2 border-primary' : 'text-text3'}`}
+            className={`flex-1 py-3 px-4 min-w-[max-content] text-sm font-medium ${activeTab === 'pending' ? 'text-primary border-b-2 border-primary' : 'text-text3'}`}
             onClick={() => setActiveTab('pending')}
           >
             Pending Users ({pendingUsers.length || 0})
           </button>
           
           {isAdmin && (
-            <button 
-              className={`flex-1 py-3 text-sm font-medium ${activeTab === 'moderators' ? 'text-primary border-b-2 border-primary' : 'text-text3'}`}
-              onClick={() => setActiveTab('moderators')}
-            >
-              Moderators ({moderators.length})
-            </button>
+            <>
+              <button 
+                className={`flex-1 py-3 px-4 min-w-[max-content] text-sm font-medium ${activeTab === 'moderators' ? 'text-primary border-b-2 border-primary' : 'text-text3'}`}
+                onClick={() => setActiveTab('moderators')}
+              >
+                Moderators ({moderators.length})
+              </button>
+              <button 
+                className={`flex-1 py-3 px-4 min-w-[max-content] text-sm font-medium ${activeTab === 'professors' ? 'text-primary border-b-2 border-primary' : 'text-text3'}`}
+                onClick={() => setActiveTab('professors')}
+              >
+                Professors ({pendingProfessors.length || 0})
+              </button>
+            </>
           )}
         </div>
       )}
@@ -197,6 +242,47 @@ const AdminScreen = ({ onNavClick, onBack }) => {
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18" className="text-text3">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                   </svg>
+                </div>
+              ))
+            )}
+          </div>
+        ) : activeTab === 'professors' && isAdmin ? (
+          // Professors List View
+          <div className="mt-4 flex flex-col gap-3 pb-8">
+            {loading ? (
+              <div className="text-center py-10">
+                <p className="text-text3 text-sm animate-pulse">Loading pending professors...</p>
+              </div>
+            ) : pendingProfessors.length === 0 ? (
+              <div className="text-center py-10 border border-dashed border-border rounded-xl">
+                <p className="text-text3 text-sm mb-2">No pending professors.</p>
+                <p className="text-xs text-text3/70">All caught up! 🎉</p>
+              </div>
+            ) : (
+              pendingProfessors.map((prof) => (
+                <div 
+                  key={prof._id} 
+                  className="bg-bg2 border border-border rounded-xl p-4 flex flex-col gap-3"
+                >
+                  <div>
+                    <h3 className="text-sm font-bold text-text">{prof.name}</h3>
+                    <p className="text-xs text-text3">Dept: {prof.department}</p>
+                    <p className="text-xs text-text3">Subjects: {prof.subjects.join(', ')}</p>
+                  </div>
+                  <div className="flex gap-2 w-full mt-2">
+                    <button 
+                      onClick={() => handleRejectProfessor(prof._id)}
+                      className="flex-1 py-2 text-xs font-semibold rounded-lg text-red-500 border border-red-500/20 hover:bg-red-500/10 transition-colors"
+                    >
+                      Reject
+                    </button>
+                    <button 
+                      onClick={() => handleApproveProfessor(prof._id)}
+                      className="flex-1 py-2 text-xs font-semibold rounded-lg text-white bg-primary-mid hover:bg-primary-light transition-colors"
+                    >
+                      Approve
+                    </button>
+                  </div>
                 </div>
               ))
             )}

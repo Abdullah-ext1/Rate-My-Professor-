@@ -24,7 +24,6 @@ const ProfCard = ({ initials, name, subject, rating, reviews, tags, rank, onRate
         </span>
       ))}
     </div>
-    <div className="text-xs text-text2 leading-relaxed italic px-2.5 py-2 bg-bg3 rounded-2xl mb-2">"Missed 12 classes, still got signed. Study last 5 years PYQs."</div>
     <button onClick={(e) => { e.stopPropagation(); onRateClick(); }} className="w-full mt-1 bg-border text-text font-semibold rounded-2xl py-2 text-xs hover:bg-border2 transition-colors cursor-pointer border border-transparent">
       Rate Professor
     </button>

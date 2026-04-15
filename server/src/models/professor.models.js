@@ -22,6 +22,14 @@ const professorSchema = new mongoose.Schema({
     required: true,
     index: true
   },
+  isApproved: {
+    type: Boolean,
+    default: false
+  },
+  addedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }
   
 }, { timestamps: true });
 

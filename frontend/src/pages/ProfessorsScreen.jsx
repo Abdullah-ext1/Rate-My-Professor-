@@ -4,6 +4,7 @@ import { ProfCardSkeleton } from "../components/Skeleton";
 import ProfCard from "../components/ProfCard";
 import AttendanceCard from "../components/AttendanceCard";
 import api from "../context/api.js";
+import { useAuth } from "../context/AuthContext";
 
 const TopNav = ({ onNavClick }) => (
   <div className="fixed top-0 left-0 right-0 bg-bg px-4 py-2.5 flex items-center justify-between flex-shrink-0 border-b border-border z-30">
@@ -54,7 +55,7 @@ const HorizontalTabs = ({ activeTab, setActiveTab }) => (
 );
 
 const ScrollArea = ({ children }) => (
-  <div className="flex-1 overflow-y-auto px-3.5 py-3 flex flex-col gap-2.5 scrollbar-hide bg-bg pt-20">
+  <div className="flex-1 overflow-y-auto px-3.5 py-3 flex flex-col gap-2.5 scrollbar-hide bg-bg pt-24">
     {children}
   </div>
 );
@@ -81,13 +82,13 @@ const SearchBar = () => (
 );
 
 const ProfessorsScreen = ({ onNavClick }) => {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("professors");
   const [selectedProfessor, setSelectedProfessor] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newProfessor, setNewProfessor] = useState({
     name: "",
     subject: "",
-    tags: "",
     department: "",
   });
   const [isLoading, setIsLoading] = useState(true);
@@ -106,8 +107,8 @@ const ProfessorsScreen = ({ onNavClick }) => {
         initials: prof.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase(),
         subject: prof.subjects.join(", "),
         department: prof.department,
-        rating: 0,
-        reviews: 0,
+        rating: prof.averageRating || 0,
+        reviews: prof.totalReviews || 0,
         tags: [],
       }))
       setProfessors(mapped)
@@ -144,7 +145,7 @@ const ProfessorsScreen = ({ onNavClick }) => {
     total: 0,
   });
 
-  const handleAttendanceChange = (id, action) => {
+  const handleAttendanceChange = async (id, action) => {
     if (action === "bulk") {
       const record = attendances.find((r) => r.id === id);
       if (record)
@@ -157,68 +158,127 @@ const ProfessorsScreen = ({ onNavClick }) => {
       return;
     }
 
-    setAttendances((prev) =>
-      prev.map((record) => {
-        if (record.id === id) {
-          if (action === "attend") {
-            return {
-              ...record,
-              attended: record.attended + 1,
-              total: record.total + 1,
-            };
-          } else if (action === "bunk") {
-            return { ...record, total: record.total + 1 };
-          }
-        }
-        return record;
-      }),
-    );
-  };
+    try {
+      await api.patch(`/attendance/${id}`, {
+        attended: action === "attend",
+      });
 
-  const saveBulkEdit = () => {
-    if (bulkEditModal.id) {
       setAttendances((prev) =>
         prev.map((record) => {
-          if (record.id === bulkEditModal.id) {
-            return {
-              ...record,
-              attended: parseInt(bulkEditModal.attended) || 0,
-              total: parseInt(bulkEditModal.total) || 0,
-            };
+          if (record.id === id) {
+            if (action === "attend") {
+              return {
+                ...record,
+                attended: record.attended + 1,
+                total: record.total + 1,
+              };
+            } else if (action === "bunk") {
+              return { ...record, total: record.total + 1 };
+            }
           }
           return record;
         }),
       );
+    } catch (error) {
+      console.error("Error marking attendance", error);
+    }
+  };
+
+  const saveBulkEdit = async () => {
+    if (bulkEditModal.id) {
+      try {
+        await api.put(`/attendance/${bulkEditModal.id}`, {
+          lecturesAttended: parseInt(bulkEditModal.attended) || 0,
+          totalLectures: parseInt(bulkEditModal.total) || 0,
+        });
+
+        setAttendances((prev) =>
+          prev.map((record) => {
+            if (record.id === bulkEditModal.id) {
+              return {
+                ...record,
+                attended: parseInt(bulkEditModal.attended) || 0,
+                total: parseInt(bulkEditModal.total) || 0,
+              };
+            }
+            return record;
+          }),
+        );
+      } catch (error) {
+        console.error("Error updating bulk attendance", error);
+      }
     }
     setBulkEditModal({ isOpen: false, id: null, attended: 0, total: 0 });
   };
 
-  const handleAddProfessor = () => {
+  const handleAddProfessor = async () => {
     if (newProfessor.name) {
       const nameParts = newProfessor.name.split(" ");
       const initials =
         nameParts.length > 1
           ? nameParts[0][0] + nameParts[nameParts.length - 1][0]
           : nameParts[0].substring(0, 2);
-      const tagsArray = newProfessor.tags
-        .split(",")
-        .map((tag) => tag.trim())
-        .filter((tag) => tag);
 
-      const newProf = {
-        id: Date.now(),
-        initials: initials.toUpperCase(),
-        name: newProfessor.name,
-        subject: newProfessor.subject,
-        rating: 0,
-        reviews: 0,
-        tags: tagsArray,
-        department: newProfessor.department,
-      };
+      try {
+        const response = await api.post("/professor", {
+          name: newProfessor.name,
+          department: newProfessor.department,
+          subjects: newProfessor.subject.split(",").map(s => s.trim()),
+          tags: []
+        }, { withCredentials: true });
 
-      setProfessors([...professors, newProf]);
-      setShowAddModal(false);
-      setNewProfessor({ name: "", subject: "", tags: "", department: "" });
+        const createdItem = response.data.data.prof;
+        
+        const newProf = {
+          id: createdItem._id,
+          initials: initials.toUpperCase(),
+          name: createdItem.name,
+          subject: createdItem.subjects.join(", "),
+          rating: 0,
+          reviews: 0,
+          tags: [],
+          department: createdItem.department,
+        };
+
+        setProfessors([...professors, newProf]);
+        setShowAddModal(false);
+        setNewProfessor({ name: "", subject: "", department: "" });
+      } catch (error) {
+        console.error("Error adding professor:", error);
+      }
+    }
+  };
+
+  const [showAddAttendanceModal, setShowAddAttendanceModal] = useState(false);
+  const [newAttendance, setNewAttendance] = useState({
+    professorId: "",
+    subject: "",
+  });
+
+  const handleAddAttendance = async () => {
+    if (newAttendance.professorId && newAttendance.subject) {
+      try {
+        const res = await api.post("/attendance", {
+          professor: newAttendance.professorId,
+          subject: newAttendance.subject,
+        });
+        const att = res.data.data;
+        const newRecord = {
+          id: att._id,
+          subject: att.subject,
+          prof: professors.find(p => p.id === att.professor)?.name || "Unknown",
+          attended: 0,
+          total: 0,
+          percent: 0,
+          status: "danger",
+          canBunk: "0",
+        };
+        setAttendances([...attendances, newRecord]);
+        setShowAddAttendanceModal(false);
+        setNewAttendance({ professorId: "", subject: "" });
+      } catch (error) {
+        console.error("Error adding attendance subject", error);
+      }
     }
   };
 
@@ -229,7 +289,7 @@ const ProfessorsScreen = ({ onNavClick }) => {
   // Sort them by rating highest to lowest
   const sortedProfessors = [...professors].sort((a, b) => b.rating - a.rating);
 
-  const currentUserRole = "admin";
+  const currentUserRole = user?.role || "student";
 
   if (selectedProfessor) {
     const prof = professors.find((p) => p.id === selectedProfessor);
@@ -246,6 +306,10 @@ const ProfessorsScreen = ({ onNavClick }) => {
     );
   }
 
+  const totalAttended = attendances.reduce((acc, curr) => acc + curr.attended, 0);
+  const totalClasses = attendances.reduce((acc, curr) => acc + curr.total, 0);
+  const overallBunkable = totalClasses > 0 ? Math.floor((totalAttended * 100) / 75) - totalClasses : 0;
+  
   return (
     <div className="flex flex-col flex-1 overflow-hidden bg-bg relative">
       <TopNav onNavClick={onNavClick} />
@@ -256,8 +320,7 @@ const ProfessorsScreen = ({ onNavClick }) => {
           <>
             <div className="flex justify-between items-center mb-2">
               <SearchBar />
-              {(currentUserRole === "admin" ||
-                currentUserRole === "moderator") && (
+              {(currentUserRole === "moderator" || currentUserRole === "admin") && (
                 <button
                   onClick={() => setShowAddModal(true)}
                   className="bg-primary/10 text-primary-mid px-3 py-2 rounded-xl text-xs font-semibold hover:bg-primary/20 transition-colors ml-2 whitespace-nowrap"
@@ -291,6 +354,16 @@ const ProfessorsScreen = ({ onNavClick }) => {
           </>
         ) : (
           <>
+            <div className="flex justify-between items-center mb-2">
+              <SearchBar />
+              <button
+                onClick={() => setShowAddAttendanceModal(true)}
+                className="bg-primary/10 text-primary-mid px-3 py-2 rounded-xl text-xs font-semibold hover:bg-primary/20 transition-colors ml-2 whitespace-nowrap"
+              >
+                + Track Class
+              </button>
+            </div>
+            
             <div className="bg-opacity-12 bg-primary border border-opacity-20 border-primary rounded-3xl px-3.5 py-3 flex gap-2.5 mb-2.5">
               <div className="w-8 h-8 rounded-2.5 bg-opacity-30 bg-primary flex items-center justify-center flex-shrink-0">
                 <svg
@@ -306,8 +379,10 @@ const ProfessorsScreen = ({ onNavClick }) => {
                 </svg>
               </div>
               <div>
-                <div className="text-xs font-medium text-primary-mid">
-                  You can bunk 4 more classes
+                <div className={`text-xs font-medium ${overallBunkable > 0 ? "text-primary-mid" : "text-red-400"}`}>
+                  {overallBunkable > 0 
+                    ? `You can bunk ${overallBunkable} more classes` 
+                    : "You cannot bunk any more classes"}
                 </div>
                 <div className="text-xs text-text3 mt-0.5">
                   across all subjects this semester
@@ -320,6 +395,18 @@ const ProfessorsScreen = ({ onNavClick }) => {
                 <ProfCardSkeleton />
                 <ProfCardSkeleton />
               </>
+            ) : attendances.length === 0 ? (
+              <div className="flex flex-col items-center justify-center my-10 py-10 bg-bg2 rounded-3xl border border-border border-dashed text-text3 px-6 text-center">
+                <span className="text-4xl mb-3 block">🧐</span>
+                <h3 className="text-text font-bold mb-1">No Classes Tracked</h3>
+                <p className="text-xs mb-4">You aren't tracking attendance for any subjects yet.</p>
+                <button 
+                  onClick={() => setShowAddAttendanceModal(true)}
+                  className="px-4 py-2 bg-primary/10 text-primary-mid rounded-xl font-semibold text-xs hover:bg-primary/20 transition-colors"
+                >
+                  Track an ongoing class now
+                </button>
+              </div>
             ) : (
               attendances.map((record) => {
                 const percent =
@@ -394,14 +481,6 @@ const ProfessorsScreen = ({ onNavClick }) => {
                   })
                 }
                 placeholder="Department (e.g., CS)"
-                className="bg-bg2 border border-border rounded-xl px-3 py-2 text-sm text-text"
-              />
-              <input
-                value={newProfessor.tags}
-                onChange={(e) =>
-                  setNewProfessor({ ...newProfessor, tags: e.target.value })
-                }
-                placeholder="Tags (comma separated)"
                 className="bg-bg2 border border-border rounded-xl px-3 py-2 text-sm text-text"
               />
             </div>
@@ -491,6 +570,59 @@ const ProfessorsScreen = ({ onNavClick }) => {
           </div>
         </div>
       )}
+
+      {showAddAttendanceModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-bg border border-border rounded-3xl p-5 w-full max-w-sm">
+            <h2 className="text-lg font-bold text-text mb-4">
+              Track New Class
+            </h2>
+            <div className="flex flex-col gap-3">
+              <select
+                value={newAttendance.professorId}
+                onChange={(e) =>
+                  setNewAttendance({ ...newAttendance, professorId: e.target.value })
+                }
+                className="bg-bg2 border border-border rounded-xl px-3 py-2 text-sm text-text outline-none focus:border-primary transition-colors"
+                style={{ colorScheme: "dark" }}
+              >
+                <option value="" disabled className="text-text3">
+                  Select Professor
+                </option>
+                {professors.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+              <input
+                value={newAttendance.subject}
+                onChange={(e) =>
+                  setNewAttendance({ ...newAttendance, subject: e.target.value })
+                }
+                placeholder="Subject Name (e.g., Data Structures)"
+                className="bg-bg2 border border-border rounded-xl px-3 py-2 text-sm text-text outline-none focus:border-primary transition-colors"
+              />
+            </div>
+            <div className="flex gap-3 mt-5">
+              <button
+                onClick={() => setShowAddAttendanceModal(false)}
+                className="flex-1 py-2 rounded-xl bg-bg2 text-text3 font-medium hover:bg-bg3 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddAttendance}
+                disabled={!newAttendance.professorId || !newAttendance.subject}
+                className="flex-1 py-2 rounded-xl bg-primary text-white font-medium hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Start Tracking
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
