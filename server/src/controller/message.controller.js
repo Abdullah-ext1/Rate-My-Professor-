@@ -20,6 +20,7 @@ const createMessage = asyncHandler(async (req, res) => {
         sender: req.user._id,
         college: req.user.college,
         content: req.body.content,
+        senderName: req.body.senderName || 'Anonymous',
     });
     
     const populatedMessage = await message.populate("sender", "name avatar _id");

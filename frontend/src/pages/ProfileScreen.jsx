@@ -186,15 +186,17 @@ const ProfileScreen = ({ onNavClick, currentUserRole }) => {
         {/* Stats Row */}
         <div className="grid grid-cols-3 gap-4 mb-8">
           <div className="bg-bg2 border border-border rounded-2xl p-4 flex flex-col items-center justify-center shadow-sm">
-            <span className="text-2xl font-bold text-text mb-1 tracking-tight">42</span>
+            <span className="text-2xl font-bold text-text mb-1 tracking-tight">{user?.postsCount || 0}</span>
             <span className="text-[10px] text-text3 uppercase font-medium tracking-wider">Posts</span>
           </div>
           <div className="bg-bg2 border border-border rounded-2xl p-4 flex flex-col items-center justify-center shadow-sm">
-            <span className="text-2xl font-bold text-text mb-1 tracking-tight">18k</span>
+            <span className="text-2xl font-bold text-text mb-1 tracking-tight">
+              {user?.karma >= 1000 ? (user?.karma / 1000).toFixed(1) + 'k' : (user?.karma || 0)}
+            </span>
             <span className="text-[10px] text-text3 uppercase font-medium tracking-wider">Karma</span>
           </div>
           <div className="bg-bg2 border border-border rounded-2xl p-4 flex flex-col items-center justify-center shadow-sm">
-            <span className="text-2xl font-bold text-text mb-1 tracking-tight">156</span>
+            <span className="text-2xl font-bold text-text mb-1 tracking-tight">{user?.repliesCount || 0}</span>
             <span className="text-[10px] text-text3 uppercase font-medium tracking-wider">Replies</span>
           </div>
         </div>

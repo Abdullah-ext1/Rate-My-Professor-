@@ -34,10 +34,10 @@ const AnnouncementScreen = ({ onNavClick }) => {
       }
     }
     fetchAnnoucement();
-  }, [activeTab]); // Trigger loading when tab changes
+  }, []); // Remove activeTab dependency
 
   const filteredAnnouncements = announcements.filter((a) =>
-    activeTab === "all" ? true : a.type === activeTab
+    activeTab === "all" ? true : (a.announcementType || a.type) === activeTab
   );
 
   const handleCreate = async () => {
@@ -140,7 +140,7 @@ const AnnouncementScreen = ({ onNavClick }) => {
             ) : filteredAnnouncements.length > 0 ? (
               filteredAnnouncements.map((announcement) => (
                 <AnnouncementCard 
-                  key={announcement._id}
+                  key={announcement._id || announcement.id}
                   announcement={announcement}
                   currentUserRole={currentUserRole}
                   onStyleType={getTypeStyle}

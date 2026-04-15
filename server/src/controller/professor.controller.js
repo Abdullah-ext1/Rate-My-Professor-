@@ -10,14 +10,22 @@ const addProfessor = asyncHandler(async (req, res) => {
     if (!name || !department || !subjects) {
         throw new ApiError(400, "All Feilds Are Required")
     }
-    const prof = await Professor.create({
-        name: name,
-        department,
-        subjects,
-        college: req.user.college,
-        addedBy: req.user._id,
-        isApproved: req.user.role === 'admin' ? true : false
-    })
+    let prof;
+    try {
+        prof = await Professor.create({
+            name: name,
+            department,
+            subjects,
+            college: req.user.college,
+            addedBy: req.user._id,
+            isApproved: req.user.role === 'admin' || req.user.role === 'moderator' ? true : false
+        })
+    } catch (error) {
+        if (error.code === 11000) {
+            throw new ApiError(409, "Professor already exists in this college")
+        }
+        throw new ApiError(500, "Error adding professor: " + error.message)
+    }
 
     return res
         .status(200)
@@ -38,11 +46,18 @@ const getProfessor = asyncHandler(async (req, res) => {
     const skip = (page - 1) * limit
 
     const filter = getCollegeFilter(req.user)
-    if (req.user.role !== 'admin') {
+    if (req.user.role !== 'admin' && req.user.role !== 'moderator') {
         filter.isApproved = true;
     } else {
         if (req.query.isApproved !== undefined) {
-            filter.isApproved = req.query.isApproved === 'true';
+            if (req.query.isApproved === 'false') {
+                filter.$or = [
+                    { isApproved: false },
+                    { pendingEdits: { $ne: null } }
+                ];
+            } else {
+                filter.isApproved = true;
+            }
         }
     }
 
@@ -96,15 +111,32 @@ const moderateProfessor = asyncHandler(async (req, res) => {
         throw new ApiError(400, "isApproved field is required");
     }
 
-    const prof = await Professor.findByIdAndUpdate(
-        professorId,
-        { $set: { isApproved } },
-        { new: true }
-    );
+    const prof = await Professor.findById(professorId);
 
     if (!prof) {
         throw new ApiError(404, "Professor not found");
     }
+
+    if (isApproved) {
+        prof.isApproved = true;
+        // Merge pending edits if they exist
+        if (prof.pendingEdits) {
+            prof.name = prof.pendingEdits.name || prof.name;
+            prof.department = prof.pendingEdits.department || prof.department;
+            if (prof.pendingEdits.subjects) {
+                prof.subjects = prof.pendingEdits.subjects;
+            }
+            prof.pendingEdits = null;
+        }
+    } else {
+        // Technically "Reject" logic. If we get here, it means we reject something.
+        // Wait, currently frontend does DELETE /professors/:id for reject. 
+        // If they use PUT with false, we might want to clear pendingEdits without unapproving the prof!
+        prof.isApproved = false;
+        prof.pendingEdits = null;
+    }
+
+    await prof.save();
 
     return res
         .status(200)
@@ -153,7 +185,7 @@ const searchProfessor = asyncHandler(async (req, res) => {
         ...getCollegeFilter(req.user)
     }
 
-    if (req.user.role !== 'admin') {
+    if (req.user.role !== 'admin' && req.user.role !== 'moderator') {
         filter.isApproved = true;
     } else {
         if (req.query.isApproved !== undefined) {
@@ -206,10 +238,23 @@ const deleteProfessor = asyncHandler(async (req, res) => {
     if (!professorId) {
         throw new ApiError(403, "Professor Id is required")
     }
-    const professor = await Professor.findByIdAndDelete(professorId)
-    if (!professor) {
+    
+    // Check if it's just discarding a pending edit vs deleting an entire prof
+    const prof = await Professor.findById(professorId);
+    if (!prof) {
         throw new ApiError(404, "Professor not found")
     }
+
+    if (prof.isApproved && prof.pendingEdits) {
+        // Discard the edits, don't delete the whole professor!
+        prof.pendingEdits = null;
+        prof.editRequestedBy = undefined;
+        await prof.save();
+        return res.status(200).json(new ApiResponse(200, null, "Professor pending edit rejected successfully"));
+    }
+
+    await Professor.findByIdAndDelete(professorId);
+    
     return res
         .status(200)
         .json(
@@ -221,11 +266,45 @@ const deleteProfessor = asyncHandler(async (req, res) => {
         );
 })
 
+const editProfessorRequest = asyncHandler(async (req, res) => {
+    const professorId = req.params.id;
+    const { name, department, subjects } = req.body;
+
+    if (!name || !department || !subjects) {
+        throw new ApiError(400, "All fields are required");
+    }
+
+    const prof = await Professor.findById(professorId);
+    if (!prof) {
+        throw new ApiError(404, "Professor not found");
+    }
+
+    if (req.user.role === 'admin' || req.user.role === 'moderator') {
+        prof.name = name;
+        prof.department = department;
+        prof.subjects = subjects;
+        await prof.save();
+        return res.status(200).json(new ApiResponse(200, prof, "Professor updated successfully"));
+    }
+
+    prof.pendingEdits = {
+        name,
+        department,
+        subjects
+    };
+    prof.editRequestedBy = req.user._id;
+
+    await prof.save();
+
+    return res.status(200).json(new ApiResponse(200, prof, "Edit request submitted for approval"));
+});
+
 export {
     addProfessor,
     getProfessor,
     searchProfessor,
     getProfessorById,
     deleteProfessor,
-    moderateProfessor
+    moderateProfessor,
+    editProfessorRequest
 }

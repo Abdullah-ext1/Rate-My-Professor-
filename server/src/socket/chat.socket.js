@@ -20,7 +20,7 @@ export function initChat(io) {
         const message = await Message.create({
           sender: socket.user._id,
           college: socket.user.college,
-          content: data.content,
+          content: data.content, senderName: data.senderName || 'Anonymous',
         })
         const populatedMessage = await message.populate("sender", "name avatar _id")
         io.emit("message", populatedMessage)

@@ -8,14 +8,14 @@ import AttendanceFlexCard from "../components/AttendanceFlexCard";
 import api from "../context/api.js";
 import { useAuth } from "../context/AuthContext";
 
-const TopNav = ({ onNavClick }) => (
+const TopNav = ({ onNavClick, userCollege }) => (
   <div className="fixed top-0 left-0 right-0 bg-bg px-4 py-2.5 flex items-center justify-between flex-shrink-0 border-b border-border z-30">
     <div className="flex items-center gap-2">
       <div className="text-base font-bold text-text font-syne tracking-tight">
         campus<span className="text-primary-mid">.</span>
       </div>
       <div className="text-xs px-2 py-0.5 rounded-full bg-opacity-15 bg-primary border border-opacity-30 border-primary text-primary-mid font-medium">
-        CS dept
+        {typeof userCollege === 'object' ? userCollege?.name : userCollege || "Department"}
       </div>
     </div>
     <div
@@ -316,22 +316,73 @@ const ProfessorsScreen = ({ onNavClick }) => {
 
         const createdItem = response.data.data.prof;
         
-        const newProf = {
-          id: createdItem._id,
-          initials: initials.toUpperCase(),
-          name: createdItem.name,
-          subject: createdItem.subjects.join(", "),
-          rating: 0,
-          reviews: 0,
-          tags: [],
-          department: createdItem.department,
-        };
+        if (currentUserRole !== "admin" && currentUserRole !== "moderator") {
+          showToast("Professor submitted for review by moderators! 👨‍🏫");
+        } else {
+          const newProf = {
+            id: createdItem._id,
+            initials: initials.toUpperCase(),
+            name: createdItem.name,
+            subject: createdItem.subjects.join(", "),
+            rating: 0,
+            reviews: 0,
+            tags: [],
+            department: createdItem.department,
+          };
+          setProfessors([...professors, newProf]);
+        }
 
-        setProfessors([...professors, newProf]);
         setShowAddModal(false);
         setNewProfessor({ name: "", subject: "", department: "" });
       } catch (error) {
         console.error("Error adding professor:", error);
+      }
+    }
+  };
+
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingProfId, setEditingProfId] = useState(null);
+
+  const handleEditProfessor = async () => {
+    if (newProfessor.name) {
+      const nameParts = newProfessor.name.split(" ");
+      const initials =
+        nameParts.length > 1
+          ? nameParts[0][0] + nameParts[nameParts.length - 1][0]
+          : nameParts[0].substring(0, 2);
+
+      try {
+        const response = await api.put(`/professor/${editingProfId}`, {
+          name: newProfessor.name,
+          department: newProfessor.department,
+          subjects: newProfessor.subject.split(",").map(s => s.trim()),
+          tags: []
+        }, { withCredentials: true });
+
+        const updatedItem = response.data.data;
+
+        if (currentUserRole !== "admin" && currentUserRole !== "moderator") {
+          showToast("Professor edits submitted for review by moderators! ✏️");
+        } else {
+          setProfessors(professors.map(p => {
+            if (p.id === editingProfId) {
+              return {
+                ...p,
+                initials: initials.toUpperCase(),
+                name: updatedItem.name,
+                subject: updatedItem.subjects.join(", "),
+                department: updatedItem.department,
+              };
+            }
+            return p;
+          }));
+        }
+
+        setShowEditModal(false);
+        setNewProfessor({ name: "", subject: "", department: "" });
+        setEditingProfId(null);
+      } catch (error) {
+        console.error("Error editing professor:", error);
       }
     }
   };
@@ -395,7 +446,15 @@ const ProfessorsScreen = ({ onNavClick }) => {
 
   const totalAttended = attendances.reduce((acc, curr) => acc + curr.attended, 0);
   const totalClasses = attendances.reduce((acc, curr) => acc + curr.total, 0);
-  const overallBunkable = totalClasses > 0 ? Math.floor((totalAttended * 100) / 75) - totalClasses : 0;
+  
+  // Calculate total positive bunks available from all classes individually
+  const overallBunkable = attendances.reduce((acc, curr) => {
+    if (curr.total > 0) {
+      const classBunks = Math.floor((curr.attended * 100) / 75) - curr.total;
+      return acc + (classBunks > 0 ? classBunks : 0);
+    }
+    return acc;
+  }, 0);
 
   const handleShare = async () => {
     try {
@@ -429,7 +488,7 @@ const ProfessorsScreen = ({ onNavClick }) => {
         )}
       </AnimatePresence>
 
-      <TopNav onNavClick={onNavClick} />
+      <TopNav onNavClick={onNavClick} userCollege={user?.college || user?.department} />
       <HorizontalTabs activeTab={activeTab} setActiveTab={setActiveTab} />
 
       <ScrollArea>
@@ -437,14 +496,12 @@ const ProfessorsScreen = ({ onNavClick }) => {
           <>
             <div className="flex justify-between items-center mb-2">
               <SearchBar />
-              {(currentUserRole === "moderator" || currentUserRole === "admin") && (
-                <button
-                  onClick={() => setShowAddModal(true)}
-                  className="bg-primary/10 text-primary-mid px-3 py-2 rounded-xl text-xs font-semibold hover:bg-primary/20 transition-colors ml-2 whitespace-nowrap"
-                >
-                  + Add Prof
-                </button>
-              )}
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="bg-primary/10 text-primary-mid px-3 py-2 rounded-xl text-xs font-semibold hover:bg-primary/20 transition-colors ml-2 whitespace-nowrap"
+              >
+                + Add Prof
+              </button>
             </div>
             {isLoading ? (
               <>
@@ -465,6 +522,15 @@ const ProfessorsScreen = ({ onNavClick }) => {
                   tags={prof.tags}
                   onReviewsClick={() => setSelectedProfessor(prof.id)}
                   onRateClick={() => onNavClick('rate-professor', prof)}
+                  onEditClick={() => {
+                    setNewProfessor({
+                      name: prof.name,
+                      department: prof.department || "",
+                      subject: prof.subject || ""
+                    });
+                    setEditingProfId(prof.id);
+                    setShowEditModal(true);
+                  }}
                 />
               ))
             )}
@@ -483,28 +549,21 @@ const ProfessorsScreen = ({ onNavClick }) => {
               </div>
             </div>
             
-            <div className="bg-opacity-12 bg-primary border border-opacity-20 border-primary rounded-3xl px-3.5 py-3 flex gap-2.5 mb-2.5">
-              <div className="w-8 h-8 rounded-2.5 bg-opacity-30 bg-primary flex items-center justify-center flex-shrink-0">
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  stroke="#AFA9EC"
-                  strokeWidth="1.5"
-                >
-                  <circle cx="8" cy="8" r="6" />
-                  <path d="M8 5v3l2 2" />
-                </svg>
-              </div>
-              <div>
-                <div className={`text-xs font-medium ${overallBunkable > 0 ? "text-primary-mid" : "text-red-400"}`}>
-                  {overallBunkable > 0 
-                    ? `You can bunk ${overallBunkable} more classes` 
-                    : "You cannot bunk any more classes"}
+            <div className={`relative overflow-hidden rounded-3xl p-4 flex items-center mb-3 border shadow-sm ${
+              overallBunkable > 0 
+                ? "bg-gradient-to-br from-primary/10 to-accent-teal/10 border-primary/20" 
+                : "bg-gradient-to-br from-red-500/10 to-orange-500/10 border-red-500/20"
+            }`}>
+              <div className={`absolute -right-8 -top-8 w-24 h-24 rounded-full blur-2xl opacity-40 ${overallBunkable > 0 ? "bg-primary" : "bg-red-500"}`}></div>
+              
+              <div className="flex-1 z-10">
+                <div className="text-[10px] uppercase tracking-wider font-bold mb-0.5 text-text2">
+                  Overall Status
                 </div>
-                <div className="text-xs text-text3 mt-0.5">
-                  across all subjects this semester
+                <div className={`text-sm font-bold font-syne ${overallBunkable > 0 ? "text-primary-light" : "text-red-400"}`}>
+                  {overallBunkable > 0 
+                    ? `You can safely bunk ${overallBunkable} classes` 
+                    : "0 bunks left. Danger zone!"}
                 </div>
               </div>
             </div>
@@ -566,6 +625,59 @@ const ProfessorsScreen = ({ onNavClick }) => {
           </>
         )}
       </ScrollArea>
+
+      {/* Edit Professor Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-bg border border-border rounded-3xl p-5 w-full max-w-sm">
+            <h2 className="text-lg font-bold text-text mb-4">Edit Professor</h2>
+            <div className="flex flex-col gap-3">
+              <input
+                value={newProfessor.name}
+                onChange={(e) =>
+                  setNewProfessor({ ...newProfessor, name: e.target.value })
+                }
+                placeholder="Professor Name"
+                className="bg-bg2 border border-border rounded-xl px-3 py-2 text-sm text-text"
+              />
+              <input
+                value={newProfessor.subject}
+                onChange={(e) =>
+                  setNewProfessor({ ...newProfessor, subject: e.target.value })
+                }
+                placeholder="Subject / Course"
+                className="bg-bg2 border border-border rounded-xl px-3 py-2 text-sm text-text"
+              />
+              <input
+                value={newProfessor.department}
+                onChange={(e) =>
+                  setNewProfessor({ ...newProfessor, department: e.target.value })
+                }
+                placeholder="Department"
+                className="bg-bg2 border border-border rounded-xl px-3 py-2 text-sm text-text"
+              />
+            </div>
+            <div className="flex gap-3 mt-5">
+              <button
+                onClick={() => {
+                  setShowEditModal(false);
+                  setEditingProfId(null);
+                  setNewProfessor({ name: "", subject: "", department: "" });
+                }}
+                className="flex-1 py-3 text-sm font-semibold text-text3 hover:text-text cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleEditProfessor}
+                className="flex-1 bg-primary text-white py-3 rounded-2xl text-sm font-semibold cursor-pointer"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Add Professor Modal */}
       {showAddModal && (

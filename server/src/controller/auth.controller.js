@@ -3,6 +3,8 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js"
 import { User } from "../models/users.models.js";
 import { College } from "../models/college.models.js"
+import { Post } from "../models/post.models.js";
+import { Comment } from "../models/comment.models.js";
 import { createNotification } from "./notification.controller.js";
 
 const onboardingAuth = asyncHandler( async(req, res) => {
@@ -95,22 +97,42 @@ const changeAccountDetails = asyncHandler(async (req, res) => {
 });
 
 const getCurrentUser = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user.id).populate('college', 'name').lean();
+  
+  if (user) {
+    const postsCount = await Post.countDocuments({ owner: user._id });
+    const repliesCount = await Comment.countDocuments({ user: user._id });
 
-  const user = await User.findById(req.user.id).populate('college', 'name')
+    const posts = await Post.find({ owner: user._id });
+    let totalPostLikes = 0;
+    posts.forEach(p => {
+      totalPostLikes += (p.likes ? p.likes.length : 0);
+    });
 
+    const comments = await Comment.find({ user: user._id });
+    let totalCommentLikes = 0;
+    comments.forEach(c => {
+      totalCommentLikes += (c.commentLike ? c.commentLike.length : 0);
+    });
+
+    user.postsCount = postsCount;
+    user.repliesCount = repliesCount;
+    user.karma = totalPostLikes + totalCommentLikes;
+  }
+  
   return res
-  .status(201)
+  .status(200)
   .json(
-    new ApiResponse(201, user, "User has been fetched successfully")
+    new ApiResponse(200, user, "User has been fetched successfully")
   )
 })
 
 const logOutUser = asyncHandler(async (req, res) => {
- 
   const options = {
     httpOnly: true,
     secure: true
   }
+  
     return res
         .status(200)
         .clearCookie("accessToken", options)

@@ -10,7 +10,7 @@ const messageSchema = new Schema({
         type: Schema.Types.ObjectId,
         ref: "College",
     },
-    content: {
+    senderName: { type: String, default: 'Anonymous' }, content: {
         type: String,
         required: true,
     },

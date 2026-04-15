@@ -2,29 +2,43 @@ import React, { useState } from 'react';
 import { useEffect } from 'react';
 import api from '../context/api.js';
 
-const getTitle = (sub) => `${sub.subjectName} ${sub.year} - ${sub.examType}`
-const getType = (sub) => sub.examType === 'Notes' ? 'Note' : 'PYQ'
+const getTitle = (sub) => {
+  if (sub.name) return sub.name; // For Professor
+  return `${sub.subjectName} ${sub.year} - ${sub.examType}`;
+}
+const getType = (sub) => {
+  if (sub.department) return 'Professor'; // For Professor
+  return sub.examType === 'Notes' ? 'Note' : 'PYQ';
+}
 
 export default function ModeratorDashboard({ onNavClick }) {
   const [activeTab, setActiveTab] = useState('pending'); // 'pending' | 'approved' | 'rejected'
+  const [contentType, setContentType] = useState('pyqs'); // 'pyqs' | 'professors'
   const [submissions, setSubmissions] = useState([]);
   
   useEffect(() => {
     const fetchSubmissions = async () => {
       try {
         const isApprovedStatus = activeTab === 'approved'
-        const res = await api.get(`/pyqs?isApproved=${isApprovedStatus}`)
+        const endpoint = contentType === 'pyqs' 
+          ? `/pyqs?isApproved=${isApprovedStatus}`
+          : `/professor?isApproved=${isApprovedStatus}`
+        const res = await api.get(endpoint)
         setSubmissions(res.data.data)
       } catch (err) {
-        console.error('Failed to fetch PYQs', err)
+        console.error(`Failed to fetch ${contentType}`, err)
       }
     }
     fetchSubmissions()
-  }, [activeTab])
+  }, [activeTab, contentType])
 
   const handleApprove = async (id) => {
     try {
-      await api.put(`/pyqs/${id}`, { isApproved: true })
+      if (contentType === 'pyqs') {
+        await api.put(`/pyqs/${id}`, { isApproved: true })
+      } else {
+        await api.put(`/professor/${id}/moderate`, { isApproved: true })
+      }
       setSubmissions(prev => prev.filter(sub => sub._id !== id))
     } catch (err) {
       console.error('Failed to approve', err)
@@ -33,7 +47,11 @@ export default function ModeratorDashboard({ onNavClick }) {
 
   const handleReject = async (id) => {
     try {
-      await api.delete(`/pyqs/${id}`)
+      if (contentType === 'pyqs') {
+        await api.delete(`/pyqs/${id}`)
+      } else {
+        await api.delete(`/professor/${id}`)
+      }
       setSubmissions(prev => prev.filter(sub => sub._id !== id))
     } catch (err) {
       console.error('Failed to reject', err)
@@ -61,7 +79,27 @@ export default function ModeratorDashboard({ onNavClick }) {
       </div>
 
       <div className="px-4 py-6">
-        {/* Tab Controls (Optional, just pending for now in mock) */}
+        {/* Content Type Controls */}
+        <div className="flex space-x-2 mb-4">
+          <button 
+             className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all shadow-sm ${
+               contentType === 'pyqs' ? 'bg-secondary-mid text-bg' : 'bg-elem-light text-text2 hover:bg-elem-hover'
+             }`}
+             onClick={() => setContentType('pyqs')}
+          >
+            Vault/PYQs
+          </button>
+          <button 
+             className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all shadow-sm ${
+               contentType === 'professors' ? 'bg-secondary-mid text-bg' : 'bg-elem-light text-text2 hover:bg-elem-hover'
+             }`}
+             onClick={() => setContentType('professors')}
+          >
+            Professors
+          </button>
+        </div>
+
+        {/* Tab Controls */}
         <div className="flex space-x-2 mb-6">
           <button 
              className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all shadow-sm ${
@@ -110,32 +148,34 @@ export default function ModeratorDashboard({ onNavClick }) {
 
                 <div className="grid grid-cols-2 gap-2 text-sm text-text2 my-3 bg-bg/50 p-2.5 rounded-lg border border-border/50">
                   <div>
-                    <span className="text-text3 text-xs block mb-0.5">Subject</span>
-                    <span className="font-medium">{sub.subjectName}</span>
+                    <span className="text-text3 text-xs block mb-0.5">{contentType === 'professors' ? 'Department' : 'Subject'}</span>
+                    <span className="font-medium">{contentType === 'professors' ? sub.department : sub.subjectName}</span>
                   </div>
                   <div>
-                    <span className="text-text3 text-xs block mb-0.5">Year / Exam</span>
-                    <span className="font-medium">{sub.year} • {sub.examType}</span>
+                    <span className="text-text3 text-xs block mb-0.5">{contentType === 'professors' ? 'Subjects' : 'Year / Exam'}</span>
+                    <span className="font-medium">{contentType === 'professors' ? sub.subjects?.join(', ') || 'N/A' : `${sub.year} • ${sub.examType}`}</span>
                   </div>
                   <div className="col-span-2 mt-1">
-                    <span className="text-text3 text-xs block mb-0.5">Submitted By</span>
-                    <span className="font-medium">{sub.owner.name}</span>
+                    <span className="text-text3 text-xs block mb-0.5">{contentType === 'professors' ? 'Added By ID' : 'Submitted By'}</span>
+                    <span className="font-medium">{contentType === 'professors' ? sub.addedBy || 'N/A' : sub.owner?.name || 'N/A'}</span>
                   </div>
                 </div>
 
-                <div className="mb-4">
-                  <a 
-                    href={sub.questionPaperUrl} 
-                    target="_blank" 
-                    rel="noreferrer" 
-                    className="flex items-center text-sm text-primary-light hover:text-primary-mid transition-colors bg-primary-dark/10 p-2 rounded-lg border border-primary-dark/20 w-fit"
-                  >
-                    <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                    </svg>
-                    View Drive Link
-                  </a>
-                </div>
+                {contentType === 'pyqs' && (
+                  <div className="mb-4">
+                    <a 
+                      href={sub.questionPaperUrl} 
+                      target="_blank" 
+                      rel="noreferrer" 
+                      className="flex items-center text-sm text-primary-light hover:text-primary-mid transition-colors bg-primary-dark/10 p-2 rounded-lg border border-primary-dark/20 w-fit"
+                    >
+                      <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                      View Drive Link
+                    </a>
+                  </div>
+                )}
 
                 <div className="flex space-x-3 mt-4 border-t border-border pt-4">
                   <button 

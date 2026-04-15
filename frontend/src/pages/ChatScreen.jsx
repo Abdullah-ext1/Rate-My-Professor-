@@ -3,7 +3,7 @@ import ConfirmModal from '../components/ConfirmModal';
 import { io } from 'socket.io-client';
 import api from '../context/api.js';
 import { useAuth } from '../context/AuthContext';
-
+import { motion, AnimatePresence } from 'framer-motion';
 
 const ChatScreen = ({ onNavClick }) => {
   const { user } = useAuth();
@@ -13,51 +13,94 @@ const ChatScreen = ({ onNavClick }) => {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef(null);
 
+  const [username, setUsername] = useState('');
+  const [hasEntered, setHasEntered] = useState(false);
+  const [tempName, setTempName] = useState('');
+  const [animKey, setAnimKey] = useState(0);
+
   // Mock current user role for testing UI 
   const currentUserRole = 'admin'; 
   const [activeMessageId, setActiveMessageId] = useState(null);
   
   const [confirmAction, setConfirmAction] = useState({ isOpen: false, action: null, targetId: null, title: '', message: '', confirmText: '', confirmColor: 'bg-red-500' });
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  useEffect(() => {
+    const savedName = localStorage.getItem('chatUsername');
+    if (savedName) {
+      setUsername(savedName);
+      setHasEntered(true);
+    }
+  }, []);
+
+  const handleGenerateName = () => {
+    try {
+      const animals = ['panda', 'lion', 'tiger', 'bear', 'wolf', 'fox', 'eagle', 'hawk', 'koala', 'dolphin'];
+      const adjectives = ['mysterious', 'bold', 'sleepy', 'happy', 'clever', 'fast', 'brave', 'quiet'];
+      const randomAnimal = animals[Math.floor(Math.random() * animals.length)];
+      const randomAdjective = adjectives[Math.floor(Math.random() * adjectives.length)];
+      setTempName(`Anonymous ${randomAdjective} ${randomAnimal}`.toLowerCase());
+      setAnimKey(prev => prev + 1);
+    } catch (e) {
+      setTempName(`Anonymous User${Math.floor(Math.random() * 1000)}`);
+      setAnimKey(prev => prev + 1);
+    }
+  };
+
+  const handleEnterChat = () => {
+    if (tempName.trim()) {
+      setUsername(tempName.trim());
+      localStorage.setItem('chatUsername', tempName.trim());
+      setHasEntered(true);
+    }
+  };
+
+  const scrollToBottom = (behavior = 'smooth') => {
+    messagesEndRef.current?.scrollIntoView({ behavior });
   };
 
   useEffect(() => {
-  const fetchMessages = async () => {
-    try {
-      const res = await api.get('/messages', { withCredentials: true })
-      setMessages(res.data.data.reverse())
-    } catch (error) {
-      console.error("Error fetching messages:", error)
+    const fetchMessages = async () => {
+      try {
+        const res = await api.get('/messages', { withCredentials: true })
+        setMessages(res.data.data.reverse())
+        
+        // Wait a tick for DOM to update, then scroll instanly (no animation)
+        setTimeout(() => scrollToBottom('auto'), 50);
+      } catch (error) {
+        console.error("Error fetching messages:", error)
+      }
     }
-  }
-  fetchMessages()
+    fetchMessages()
 
-  socketRef.current = io('http://localhost:9000', {
-    withCredentials: true
-  })
+    socketRef.current = io('http://localhost:9000', {
+      withCredentials: true
+    })
 
-  socketRef.current.on('message', (newMessage) => {
-    setMessages(prev => [...prev, newMessage])
-  })
+    socketRef.current.on('message', (newMessage) => {
+      setMessages(prev => [...prev, newMessage])
+      if (hasEntered) {
+        setTimeout(() => scrollToBottom('smooth'), 50);
+      }
+    })
 
-  socketRef.current.on('onlineUsers', (users) => {
-    setOnlineCount(users.length)
-  })
+    socketRef.current.on('onlineUsers', (users) => {
+      setOnlineCount(users.length)
+    })
 
-  return () => {
-    socketRef.current.disconnect()
-  }
-}, [])
+    return () => {
+      socketRef.current.disconnect()
+    }
+  }, [hasEntered])
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    if (hasEntered) {
+      scrollToBottom('auto');
+    }
+  }, [hasEntered]);
 
   const handleSend = () => {
     if (input.trim()) {
-    socketRef.current.emit('sendMessage', { content: input })
+    socketRef.current.emit('sendMessage', { content: input, senderName: username })
     setInput('')
     }
   };
@@ -123,6 +166,44 @@ const ChatScreen = ({ onNavClick }) => {
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden bg-bg relative">
+      {!hasEntered && (
+        <div className="absolute inset-0 z-[100] bg-bg flex flex-col items-center justify-center p-6 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-3xl mb-6">👻</div>
+          <h1 className="text-2xl font-bold text-text mb-2 font-syne">Enter Campus Chat</h1>
+          <p className="text-sm text-text3 mb-8 max-w-[260px]">Choose an anonymous identity to join the conversation.</p>
+          
+          <div className="w-full max-w-xs flex flex-col gap-4">
+            <motion.div
+              key={animKey}
+              initial={animKey === 0 ? false : { scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 15 }}
+            >
+              <input 
+                type="text" 
+                value={tempName} 
+                onChange={(e) => setTempName(e.target.value)} 
+                placeholder="anonymous panda" 
+                className="w-full bg-bg2 border border-border focus:border-primary/50 transition-colors rounded-xl px-4 py-3.5 text-sm text-text outline-none text-center font-medium" 
+              />
+            </motion.div>
+            <button 
+              onClick={handleGenerateName} 
+              className="text-primary-mid text-[11px] font-bold uppercase tracking-wider mb-2 hover:underline opacity-80"
+            >
+              Generate Random Name ✨
+            </button>
+            <button 
+              onClick={handleEnterChat} 
+              disabled={!tempName.trim()} 
+              className="w-full bg-primary text-white font-semibold rounded-xl py-3.5 disabled:opacity-50 transition-opacity mt-2"
+            >
+              Join Chat
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="fixed top-0 left-0 right-0 bg-bg px-4 py-2.5 flex items-center justify-between flex-shrink-0 border-b border-border z-30">
         <div>
           <div className="text-sm font-semibold text-text font-syne">Campus chat</div>
@@ -148,7 +229,7 @@ const ChatScreen = ({ onNavClick }) => {
             </div>
             <div className={`flex-1 flex flex-col relative ${msg.sender._id === user?._id ? 'items-end' : 'items-start'}`}>
               <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => setActiveMessageId(activeMessageId === msg._id ? null : msg._id)}>
-                <span className="text-xs font-medium text-text2">{msg.sender._id === user?._id ? 'you' : 'Anonymous'}</span>
+                <span className="text-xs font-medium text-text2">{msg.senderName && msg.senderName !== 'Anonymous' ? msg.senderName : (msg.sender._id === user?._id ? (username || 'you') : 'Anonymous')}</span>
                 <span className="text-xs px-1.5 py-0.5 rounded-lg border border-opacity-30 border-primary bg-opacity-10 bg-primary text-primary-mid font-medium">{msg.sender._id === user?._id ? 'rizvi' : 'rizvi'}</span>
                 <span className="text-xs text-text3">{new Date(msg.createdAt).toLocaleTimeString()}</span>
                 {msg.sender._id !== user?._id && (currentUserRole === 'admin' || currentUserRole === 'moderator') && (

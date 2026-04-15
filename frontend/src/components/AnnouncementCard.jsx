@@ -4,9 +4,9 @@ const AnnouncementCard = ({ announcement, currentUserRole, onStyleType, onDelete
   <div className="bg-bg2 border border-border rounded-2xl p-4 shadow-sm hover:border-border2 transition-colors">
     <div className="flex justify-between items-start mb-2">
       <span
-        className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider border ${onStyleType(announcement.type)}`}
+        className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider border ${onStyleType(announcement.announcementType || announcement.type)}`}
       >
-        {announcement.type}
+        {announcement.announcementType || announcement.type}
       </span>
       <span className="text-xs text-text3 font-medium">
         {announcement.date}
@@ -21,10 +21,10 @@ const AnnouncementCard = ({ announcement, currentUserRole, onStyleType, onDelete
     <div className="flex justify-between items-center pt-2 border-t border-border">
       <div className="flex items-center gap-2">
         <div className="w-5 h-5 rounded-full bg-primary-mid/20 flex items-center justify-center text-[10px] font-bold text-primary-mid">
-          {announcement.author.charAt(0)}
+          {announcement.author?.charAt(0) || "A"}
         </div>
         <span className="text-xs font-semibold text-text3">
-          {announcement.author}
+          {announcement.author || "Admin"}
         </span>
       </div>
       {(currentUserRole === "admin" || currentUserRole === "moderator") && (

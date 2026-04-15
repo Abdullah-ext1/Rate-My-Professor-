@@ -29,6 +29,14 @@ const professorSchema = new mongoose.Schema({
   addedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
+  },
+  pendingEdits: {
+    type: mongoose.Schema.Types.Mixed,
+    default: null
+  },
+  editRequestedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
   }
   
 }, { timestamps: true });
