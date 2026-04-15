@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import ProfessorReviewsScreen from "./ProfessorReviewsScreen";
 import { ProfCardSkeleton } from "../components/Skeleton";
 import ProfCard from "../components/ProfCard";
 import AttendanceCard from "../components/AttendanceCard";
+import AttendanceFlexCard from "../components/AttendanceFlexCard";
 import api from "../context/api.js";
 import { useAuth } from "../context/AuthContext";
 
@@ -81,6 +83,69 @@ const SearchBar = () => (
   </div>
 );
 
+const getGrade = (p) => {
+  if (p >= 90) return { label: 'GOAT 🐐', color: '#1D9E75', bg: 'rgba(29,158,117,0.1)' };
+  if (p >= 75) return { label: 'Consistent 🔥', color: '#1D9E75', bg: 'rgba(29,158,117,0.1)' };
+  if (p >= 60) return { label: 'Risky 😬', color: '#EF9F27', bg: 'rgba(239,159,39,0.1)' };
+  return { label: 'Danger Zone 💀', color: '#E24B4A', bg: 'rgba(226,75,74,0.1)' };
+};
+
+const ShareModal = ({ isOpen, onClose, onShare, subjects }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-end sm:items-center justify-center transition-opacity" onClick={onClose}>
+      <div 
+        className="bg-gradient-to-b from-[#1a1930] to-[#0E0D14] w-full max-w-sm rounded-t-3xl sm:rounded-3xl p-5 border border-primary/15 shadow-2xl animate-slide-up"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="w-10 h-1 bg-border2 rounded-full mx-auto mb-5 sm:hidden" />
+        
+        <div className="flex items-center gap-2.5 mb-5">
+          <div className="w-9 h-9 rounded-xl bg-accent-teal/15 border border-accent-teal/20 flex items-center justify-center">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1D9E75" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-text font-syne">Flex in Global Chat</h3>
+            <p className="text-xs text-text3 mt-0.5">Show off your attendance stats 💪</p>
+          </div>
+          <button onClick={onClose} className="ml-auto w-8 h-8 rounded-full bg-bg3 flex items-center justify-center hover:bg-bg4 transition-colors">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5E5C72" strokeWidth="2.5" strokeLinecap="round">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="mb-5">
+          <span className="text-[10px] text-text3 uppercase tracking-widest font-semibold mb-2 block ml-1">Preview</span>
+          <AttendanceFlexCard subjects={subjects} compact />
+        </div>
+
+        <div className="flex items-center gap-2 mb-5 px-3 py-2.5 rounded-xl bg-accent-teal/8 border border-accent-teal/15">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1D9E75" strokeWidth="2" strokeLinecap="round">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="16" x2="12" y2="12" />
+            <line x1="12" y1="8" x2="12.01" y2="8" />
+          </svg>
+          <span className="text-[11px] text-accent-teal">Your stats will be shared anonymously in Global Chat</span>
+        </div>
+
+        <button 
+          onClick={onShare}
+          className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-accent-teal to-[#15B886] text-white text-sm font-bold tracking-wide hover:shadow-lg hover:shadow-accent-teal/25 active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-2"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
+          </svg>
+          Send to Global Chat 💬
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const ProfessorsScreen = ({ onNavClick }) => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("professors");
@@ -95,8 +160,9 @@ const ProfessorsScreen = ({ onNavClick }) => {
 
   const [professors, setProfessors] = useState([]);
   const [attendances, setAttendances] = useState([]);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
 
- useEffect(() => {
+  useEffect(() => {
   const fetchData = async () => {
     setIsLoading(true)
     try {
@@ -144,6 +210,13 @@ const ProfessorsScreen = ({ onNavClick }) => {
     attended: 0,
     total: 0,
   });
+  
+  const [toastMessage, setToastMessage] = useState("");
+
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(""), 3000);
+  };
 
   const handleAttendanceChange = async (id, action) => {
     if (action === "bulk") {
@@ -155,6 +228,20 @@ const ProfessorsScreen = ({ onNavClick }) => {
           attended: record.attended,
           total: record.total,
         });
+      return;
+    }
+    
+    if (action === "flex") {
+      const record = attendances.find((r) => r.id === id);
+      if (!record) return;
+      try {
+        const canBunkDetails = record.total > 0 && record.percent >= 75 ? `I can bunk ${record.canBunk} more classes!` : "I am in the danger zone! 💀";
+        const flexMsg = `📊 Flexing my Attendance for ${record.subject}! ${canBunkDetails} (Attendance: ${record.percent}%)`;
+        await api.post('/messages', { content: flexMsg });
+        showToast(`💬 ${record.subject} flexed to Global Chat!`);
+      } catch (err) {
+        showToast('Failed to share.');
+      }
       return;
     }
 
@@ -309,9 +396,39 @@ const ProfessorsScreen = ({ onNavClick }) => {
   const totalAttended = attendances.reduce((acc, curr) => acc + curr.attended, 0);
   const totalClasses = attendances.reduce((acc, curr) => acc + curr.total, 0);
   const overallBunkable = totalClasses > 0 ? Math.floor((totalAttended * 100) / 75) - totalClasses : 0;
-  
+
+  const handleShare = async () => {
+    try {
+      const overallResult = totalClasses > 0 ? Math.round((totalAttended / totalClasses) * 100) : 0;
+      const gradeLabel = getGrade(overallResult);
+      const flexMessage = `📊 My attendance stats: ${overallResult}% overall across ${attendances.length} subjects! ${gradeLabel.label}`;
+
+      await api.post('/messages', { content: flexMessage });
+      
+      showToast('💬 Stats flexed to Global Chat!');
+      setTimeout(() => onNavClick('chat'), 1000);
+    } catch (err) {
+      console.error(err);
+      showToast('Failed to share.');
+    }
+    setShareModalOpen(false);
+  };
+
   return (
     <div className="flex flex-col flex-1 overflow-hidden bg-bg relative">
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, x: "-50%" }}
+            animate={{ opacity: 1, y: 0, x: "-50%" }}
+            exit={{ opacity: 0, y: 20, x: "-50%" }}
+            className="fixed bottom-24 left-1/2 z-[200] bg-primary/20 backdrop-blur-md border border-primary/30 text-primary-light px-4 py-2 rounded-full text-xs font-bold shadow-lg whitespace-nowrap"
+          >
+            {toastMessage}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <TopNav onNavClick={onNavClick} />
       <HorizontalTabs activeTab={activeTab} setActiveTab={setActiveTab} />
 
@@ -356,12 +473,14 @@ const ProfessorsScreen = ({ onNavClick }) => {
           <>
             <div className="flex justify-between items-center mb-2">
               <SearchBar />
-              <button
-                onClick={() => setShowAddAttendanceModal(true)}
-                className="bg-primary/10 text-primary-mid px-3 py-2 rounded-xl text-xs font-semibold hover:bg-primary/20 transition-colors ml-2 whitespace-nowrap"
-              >
-                + Track Class
-              </button>
+              <div className="flex gap-2 ml-2">
+                <button
+                  onClick={() => setShowAddAttendanceModal(true)}
+                  className="bg-primary/10 text-primary-mid px-3 py-2 rounded-xl text-xs font-semibold hover:bg-primary/20 transition-colors whitespace-nowrap"
+                >
+                  + Track Class
+                </button>
+              </div>
             </div>
             
             <div className="bg-opacity-12 bg-primary border border-opacity-20 border-primary rounded-3xl px-3.5 py-3 flex gap-2.5 mb-2.5">
@@ -571,6 +690,7 @@ const ProfessorsScreen = ({ onNavClick }) => {
         </div>
       )}
 
+      {/* Add Attendance Modal */}
       {showAddAttendanceModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-bg border border-border rounded-3xl p-5 w-full max-w-sm">
@@ -623,7 +743,14 @@ const ProfessorsScreen = ({ onNavClick }) => {
         </div>
       )}
 
+      <ShareModal 
+        isOpen={shareModalOpen}
+        onClose={() => setShareModalOpen(false)}
+        onShare={handleShare}
+        subjects={attendances.map(a => ({ subject: a.subject, present: a.attended, total: a.total, percentage: a.percent }))}
+      />
     </div>
   );
 };
+
 export default ProfessorsScreen;

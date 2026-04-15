@@ -3,7 +3,6 @@ import ConfirmModal from '../components/ConfirmModal';
 import { PostCardSkeleton } from '../components/Skeleton';
 import HorizontalTabs from '../components/HorizontalTabs';
 import ComposeBox from '../components/ComposeBox';
-import AttendanceMini from '../components/AttendanceMini';
 import PostCard from '../components/PostCard';
 import FeedTopNav from '../components/FeedTopNav';
 import { useAuth } from '../context/AuthContext';
@@ -83,7 +82,6 @@ const FeedScreen = ({ onNavClick }) => {
       />
       <ScrollArea>
         <ComposeBox onPost={handleCreatePost} />
-        <AttendanceMini />
         {isLoading ? (
           <>
             <PostCardSkeleton />

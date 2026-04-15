@@ -15,6 +15,8 @@ connectDb()
   }
 })
 
+  app.set('io', io)
+
   initChat(io)
 
   server.listen(process.env.PORT, () => {

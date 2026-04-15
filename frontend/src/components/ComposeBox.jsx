@@ -1,23 +1,75 @@
 import React, { useState } from 'react';
+import api from '../context/api';
 
 const ComposeBox = ({ onPost }) => {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [category, setCategory] = useState('confession');
   const [isExpanded, setIsExpanded] = useState(false);
-  
+  const [showFlexOptions, setShowFlexOptions] = useState(false);
+  const [subAttendances, setSubAttendances] = useState([]);
+  const [isLoadingFlex, setIsLoadingFlex] = useState(false);
+  const [selectedFlex, setSelectedFlex] = useState(null);
+
   const handlePost = () => {
-    if (content.trim() || title.trim()) {
-      onPost(title, content, category);
+    let finalContent = content;
+    if (selectedFlex) {
+      finalContent = `${content}\n\n[ATTENDANCE_FLEX]${JSON.stringify({
+        subject: selectedFlex.subject,
+        percent: selectedFlex.percent,
+        canBunk: selectedFlex.canBunk
+      })}`;
+    }
+    
+    if (finalContent.trim() || title.trim()) {
+      onPost(title, finalContent, category);
       setTitle('');
       setContent('');
       setIsExpanded(false);
+      setShowFlexOptions(false);
+      setSelectedFlex(null);
     }
   };
 
+  const handleFetchAttendanceForFlex = async () => {
+    if (showFlexOptions) {
+      setShowFlexOptions(false);
+      return;
+    }
+    
+    setIsLoadingFlex(true);
+    setShowFlexOptions(true);
+    try {
+      const res = await api.get('/attendance', { withCredentials: true });
+      const mappedAtt = res.data.data.map((att) => {
+        const percent = att.totalClasses > 0 ? Math.round((att.classAttended / att.totalClasses) * 100) : 0;
+        return {
+          id: att._id,
+          subject: att.subject,
+          percent,
+          canBunk: att.bunkmeter > 0 ? att.bunkmeter.toString() : "0",
+        };
+      });
+      setSubAttendances(mappedAtt);
+    } catch (err) {
+      console.error('Failed to fetch attendance for flex', err);
+    } finally {
+      setIsLoadingFlex(false);
+    }
+  };
+
+  const insertFlex = (subjectRecord) => {
+    setSelectedFlex(subjectRecord);
+    setShowFlexOptions(false);
+    setCategory('attendance');
+  };
+
   return (
-    <div className={`bg-bg2 border border-border rounded-3xl p-3 transition-all duration-300 ease-out z-10 ${isExpanded ? 'shadow-lg bg-bg' : 'hover:-translate-y-[1px] hover:shadow-sm'}`}>
-      <div className="flex gap-2">
+    <div className={`relative bg-bg2 border border-border rounded-3xl p-3 transition-all duration-300 ease-out z-10 overflow-hidden ${isExpanded ? 'shadow-lg bg-bg' : 'hover:-translate-y-[1px] hover:shadow-sm'} ${category === 'attendance' && isExpanded ? 'border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.15)] bg-gradient-to-br from-bg via-bg to-emerald-950/10' : ''}`}>
+      {isExpanded && category === 'attendance' && (
+        <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-[40px] pointer-events-none -z-10" />
+      )}
+      <div className="flex gap-2 relative z-10">
         <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs flex-shrink-0 mt-0.5 transition-colors ${isExpanded && category === 'confession' ? 'bg-red-500/15 border-red-500/30' : 
            isExpanded && category === 'question' ? 'bg-blue-500/15 border-blue-500/30' : 
            isExpanded && category === 'rant' ? 'bg-orange-500/15 border-orange-500/30' : 
@@ -95,20 +147,52 @@ const ComposeBox = ({ onPost }) => {
               );
             })}
           </div>
-          <div className="flex gap-2 justify-end">
-            <button 
-              onClick={() => setIsExpanded(false)} 
-              className="text-xs text-text3 hover:text-text px-3 py-1.5 transition-colors cursor-pointer font-medium"
+          <div className="flex gap-2 justify-between items-center w-full">
+            <button
+              onClick={handleFetchAttendanceForFlex}
+              className="text-xs bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-3 py-1.5 rounded-xl font-medium hover:bg-emerald-500/20 transition-colors"
             >
-              Cancel
+              + Bunk Meter 📊
             </button>
-            <button 
-              onClick={handlePost} 
-              className="bg-primary text-white rounded-2xl px-4 py-1.5 text-xs font-semibold cursor-pointer hover:bg-primary-dark transition-colors"
-            >
-              Post
-            </button>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => setIsExpanded(false)}
+                className="text-xs text-text3 hover:text-text px-3 py-1.5 transition-colors cursor-pointer font-medium"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handlePost} 
+                className="bg-primary text-white rounded-2xl px-4 py-1.5 text-xs font-semibold cursor-pointer hover:bg-primary-dark transition-colors"
+              >
+                Post
+              </button>
+            </div>
           </div>
+          
+          {showFlexOptions && (
+            <div className="mt-2 flex flex-col gap-2 bg-bg p-2 rounded-xl border border-border2">
+              <div className="text-[10px] text-text3 uppercase font-bold tracking-wider mb-1">Select subject to flex</div>
+              {isLoadingFlex ? (
+                <div className="text-xs text-text3 p-2">Loading classes...</div>
+              ) : subAttendances.length === 0 ? (
+                <div className="text-xs text-text3 p-2">No tracked classes found.</div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {subAttendances.map(att => (
+                    <button
+                      key={att.id}
+                      onClick={() => insertFlex(att)}
+                      className="text-xs bg-bg2 hover:bg-bg3 border border-border px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
+                    >
+                      <span>{att.subject}</span>
+                      <span className="text-[10px] bg-primary/20 px-1 rounded text-primary-light">{att.percent}%</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

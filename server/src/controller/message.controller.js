@@ -15,6 +15,32 @@ const getMessages = asyncHandler(async (req, res) => {
         );
 })
 
+const createMessage = asyncHandler(async (req, res) => {
+    const message = await Message.create({
+        sender: req.user._id,
+        college: req.user.college,
+        content: req.body.content,
+    });
+    
+    const populatedMessage = await message.populate("sender", "name avatar _id");
+
+    const io = req.app.get('io');
+    if (io) {
+        io.emit("message", populatedMessage);
+    }
+    
+    return res
+        .status(201)
+        .json(
+            new ApiResponse(
+                201,
+                populatedMessage,
+                "Message sent successfully"
+            )
+        );
+});
+
 export {
-    getMessages
+    getMessages,
+    createMessage
 }

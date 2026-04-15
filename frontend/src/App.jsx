@@ -15,6 +15,7 @@ import RateProfessorScreen from './pages/RateProfessorScreen';
 import OnBoardingScreen from './pages/OnBoardingScreen';
 import PrivacyPolicyScreen from './pages/PrivacyPolicyScreen';
 import ModeratorDashboard from './pages/ModeratorDashboard';
+import AttendanceScreen from './pages/AttendanceScreen';
 import { AnimatePresence, motion } from 'framer-motion';
 import {ProtectedRoute} from "./context/ProtectedRoute"
 import { useAuth } from './context/AuthContext';
@@ -90,6 +91,14 @@ const AppLayout = () => {
             <ProtectedRoute>
               <div className="animate-fade-in">
                 <ChatScreen onNavClick={handleNavClick} />
+              </div>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/attendance" element={
+            <ProtectedRoute>
+              <div className="animate-fade-in">
+                <AttendanceScreen onNavClick={handleNavClick} />
               </div>
             </ProtectedRoute>
           } />
