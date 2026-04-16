@@ -126,15 +126,14 @@ const PostCard = ({ id, handle, handleId, isLiked = false, likes, comments, onCl
             <div className="absolute -top-6 -right-6 w-20 h-20 bg-emerald-500/20 rounded-full blur-2xl pointer-events-none" />
             <div className="relative z-10 flex items-center gap-3">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-sm shadow-[0_0_10px_rgba(16,185,129,0.2)]">📊</div>
                 <div>
                   <span className="text-[10px] text-text3 uppercase tracking-wider font-bold block">Attendance Flex</span>
                   {flexData ? (
                     <span className="text-xs text-emerald-400 font-bold tracking-wide">
-                      {flexData.subject} • {flexData.percent}% • Bunk: {flexData.canBunk} ✨
+                      {flexData.subject} • {flexData.percent}% • Bunk: {flexData.canBunk}
                     </span>
                   ) : (
-                    <span className="text-xs text-emerald-400 font-bold tracking-wide">Dynamic Stats Shared ✨</span>
+                    <span className="text-xs text-emerald-400 font-bold tracking-wide">Dynamic Stats Shared</span>
                   )}
                 </div>
               </div>

@@ -36,20 +36,49 @@ const ChatScreen = ({ onNavClick }) => {
     try {
       const animals = ['panda', 'lion', 'tiger', 'bear', 'wolf', 'fox', 'eagle', 'hawk', 'koala', 'dolphin'];
       const adjectives = ['mysterious', 'bold', 'sleepy', 'happy', 'clever', 'fast', 'brave', 'quiet'];
-      const randomAnimal = animals[Math.floor(Math.random() * animals.length)];
-      const randomAdjective = adjectives[Math.floor(Math.random() * adjectives.length)];
-      setTempName(`Anonymous ${randomAdjective} ${randomAnimal}`.toLowerCase());
+      
+      let generatedName = '';
+      let isUnique = false;
+      let attempts = 0;
+
+      while (!isUnique && attempts < 10) {
+        const randomAnimal = animals[Math.floor(Math.random() * animals.length)];
+        const randomAdjective = adjectives[Math.floor(Math.random() * adjectives.length)];
+        generatedName = `${randomAdjective} ${randomAnimal}`.toLowerCase();
+        
+        // Simple fast check: verify name is not already used in loaded messages
+        const alreadyUsed = messages.some(msg => msg.senderName?.toLowerCase() === generatedName);
+        if (!alreadyUsed) {
+          isUnique = true;
+        } else {
+          generatedName = `${generatedName} ${Math.floor(Math.random() * 1000)}`;
+          isUnique = true;
+        }
+        attempts++;
+      }
+
+      setTempName(generatedName);
       setAnimKey(prev => prev + 1);
     } catch (e) {
-      setTempName(`Anonymous User${Math.floor(Math.random() * 1000)}`);
+      setTempName(`user${Math.floor(Math.random() * 10000)}`);
       setAnimKey(prev => prev + 1);
     }
   };
 
   const handleEnterChat = () => {
-    if (tempName.trim()) {
-      setUsername(tempName.trim());
-      localStorage.setItem('chatUsername', tempName.trim());
+    let desiredName = tempName.trim();
+    if (desiredName) {
+      const alreadyUsed = messages.some(msg => 
+        msg.senderName?.toLowerCase() === desiredName.toLowerCase() && 
+        msg.sender?._id !== user?._id
+      );
+
+      if (alreadyUsed) {
+        desiredName = `${desiredName} ${Math.floor(Math.random() * 1000)}`;
+      }
+
+      setUsername(desiredName);
+      localStorage.setItem('chatUsername', desiredName);
       setHasEntered(true);
     }
   };
@@ -183,7 +212,7 @@ const ChatScreen = ({ onNavClick }) => {
                 type="text" 
                 value={tempName} 
                 onChange={(e) => setTempName(e.target.value)} 
-                placeholder="anonymous panda" 
+                placeholder="sleepy panda" 
                 className="w-full bg-bg2 border border-border focus:border-primary/50 transition-colors rounded-xl px-4 py-3.5 text-sm text-text outline-none text-center font-medium" 
               />
             </motion.div>
@@ -237,23 +266,39 @@ const ChatScreen = ({ onNavClick }) => {
                 )}
               </div>
               <div className={`text-xs mt-1.5 px-3 py-2 rounded-2.5 ${msg.sender._id === user?._id ? 'bg-opacity-15 bg-primary border border-opacity-30 border-primary text-text' : 'bg-bg2 border border-border text-text'}`}>
-                {msg.content?.includes('attendance') || msg.content?.includes('Attendance') ? (
-                  <div>
-                    <div className="mb-1.5">{msg.content}</div>
-                    <div className="relative overflow-hidden rounded-xl border border-emerald-500/15 bg-gradient-to-br from-[#1a1830] to-[#0E0D14] p-2.5 mt-1">
-                      <div className="absolute -top-4 -right-4 w-14 h-14 bg-primary/10 rounded-full blur-xl pointer-events-none" />
-                      <div className="relative z-10 flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-lg bg-emerald-500/15 border border-emerald-500/20 flex items-center justify-center text-xs">📊</div>
-                        <div>
-                          <span className="text-[9px] text-text3 uppercase tracking-wider font-medium block">Attendance Flex</span>
-                          <span className="text-[10px] text-emerald-400 font-semibold">Stats shared ✨</span>
+                {(() => {
+                  if (msg.content?.includes('attendance') || msg.content?.includes('Attendance')) {
+                    let cleanContent = msg.content;
+                    let displayStats = "Stats shared";
+                    
+                    const percentMatch = cleanContent.match(/\(Attendance: (.*?)\)/);
+                    if (percentMatch) {
+                      displayStats = `Attendance: ${percentMatch[1]}`;
+                      cleanContent = cleanContent.replace(percentMatch[0], '').trim();
+                    } else {
+                      const overallMatch = cleanContent.match(/stats: (\d+%) overall/);
+                      if (overallMatch) {
+                        displayStats = `Overall: ${overallMatch[1]}`;
+                      }
+                    }
+
+                    return (
+                      <div>
+                        <div className="mb-1.5">{cleanContent}</div>
+                        <div className="relative overflow-hidden rounded-xl border border-emerald-500/15 bg-gradient-to-br from-[#1a1830] to-[#0E0D14] p-2.5 mt-1">
+                          <div className="absolute -top-4 -right-4 w-14 h-14 bg-primary/10 rounded-full blur-xl pointer-events-none" />
+                          <div className="relative z-10 flex items-center gap-2">
+                            <div>
+                              <span className="text-[9px] text-text3 uppercase tracking-wider font-medium block">Attendance Flex</span>
+                              <span className="text-[10px] text-emerald-400 font-semibold">{displayStats}</span>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </div>
-                ) : (
-                  msg.content
-                )}
+                    );
+                  }
+                  return msg.content;
+                })()}
               </div>
 
               {/* Moderation Dropdown */}

@@ -2,10 +2,12 @@ import React from 'react';
 
 const ProfCard = ({ initials, name, subject, rating, reviews, tags, rank, onRateClick, onReviewsClick, onEditClick }) => (
   <div onClick={onReviewsClick} className="bg-bg2 border border-border rounded-3xl p-3.5 mb-3 cursor-pointer hover:border-border2 transition-colors relative">
-    <div className="absolute -top-2 -right-2 w-7 h-7 bg-bg3 border border-border rounded-full flex justify-center items-center font-bold font-syne text-sm shadow-sm" 
-         style={{ color: rank === 1 ? '#FBBF24' : rank === 2 ? '#9CA3AF' : rank === 3 ? '#D97706' : '#9B99B0' }}>
-      #{rank}
-    </div>
+    {rank !== undefined && rank !== null && (
+      <div className="absolute -top-2 -right-2 w-7 h-7 bg-bg3 border border-border rounded-full flex justify-center items-center font-bold font-syne text-sm shadow-sm" 
+           style={{ color: rank === 1 ? '#FBBF24' : rank === 2 ? '#9CA3AF' : rank === 3 ? '#D97706' : '#9B99B0' }}>
+        #{rank}
+      </div>
+    )}
 
     <div className="flex items-center gap-2.5 mb-2.5 mt-1">
       <div className="w-9 h-9 rounded-2.5 bg-opacity-20 bg-primary flex items-center justify-center text-xs font-semibold text-primary-mid flex-shrink-0 font-syne">{initials}</div>

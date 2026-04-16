@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import ProfessorReviewsScreen from "./ProfessorReviewsScreen";
 import { ProfCardSkeleton } from "../components/Skeleton";
@@ -62,7 +63,7 @@ const ScrollArea = ({ children }) => (
   </div>
 );
 
-const SearchBar = () => (
+const SearchBar = ({ searchQuery, setSearchQuery }) => (
   <div className="flex items-center gap-2 bg-bg2 border border-border rounded-2.5 px-3 py-2 mb-1">
     <svg
       width="13"
@@ -77,6 +78,8 @@ const SearchBar = () => (
       <path d="M11 11l3 3" />
     </svg>
     <input
+      value={searchQuery}
+      onChange={(e) => setSearchQuery(e.target.value)}
       placeholder="Search professor..."
       className="flex-1 bg-transparent border-none text-xs text-text placeholder-text3 outline-none"
     />
@@ -148,7 +151,8 @@ const ShareModal = ({ isOpen, onClose, onShare, subjects }) => {
 
 const ProfessorsScreen = ({ onNavClick }) => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState("professors");
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState(location.state?.professor === "attendance" ? "attendance" : "professors");
   const [selectedProfessor, setSelectedProfessor] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newProfessor, setNewProfessor] = useState({
@@ -157,6 +161,7 @@ const ProfessorsScreen = ({ onNavClick }) => {
     department: "",
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const [professors, setProfessors] = useState([]);
   const [attendances, setAttendances] = useState([]);
@@ -172,6 +177,7 @@ const ProfessorsScreen = ({ onNavClick }) => {
         name: prof.name,
         initials: prof.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase(),
         subject: prof.subjects.join(", "),
+        subjectsArray: prof.subjects || [],
         department: prof.department,
         rating: prof.averageRating || 0,
         reviews: prof.totalReviews || 0,
@@ -236,8 +242,9 @@ const ProfessorsScreen = ({ onNavClick }) => {
       if (!record) return;
       try {
         const canBunkDetails = record.total > 0 && record.percent >= 75 ? `I can bunk ${record.canBunk} more classes!` : "I am in the danger zone! 💀";
-        const flexMsg = `📊 Flexing my Attendance for ${record.subject}! ${canBunkDetails} (Attendance: ${record.percent}%)`;
-        await api.post('/messages', { content: flexMsg });
+        const flexMsg = `Flexing my Attendance for ${record.subject}! ${canBunkDetails} (Attendance: ${record.percent}%)`;
+        const senderName = localStorage.getItem('chatUsername') || "Anonymous";
+        await api.post('/messages', { content: flexMsg, senderName });
         showToast(`💬 ${record.subject} flexed to Global Chat!`);
       } catch (err) {
         showToast('Failed to share.');
@@ -425,7 +432,9 @@ const ProfessorsScreen = ({ onNavClick }) => {
   };
 
   // Sort them by rating highest to lowest
-  const sortedProfessors = [...professors].sort((a, b) => b.rating - a.rating);
+  const sortedProfessors = [...professors]
+    .filter((prof) => prof.name.toLowerCase().includes(searchQuery.toLowerCase()) || prof.subject.toLowerCase().includes(searchQuery.toLowerCase()))
+    .sort((a, b) => b.rating - a.rating);
 
   const currentUserRole = user?.role || "student";
 
@@ -460,9 +469,10 @@ const ProfessorsScreen = ({ onNavClick }) => {
     try {
       const overallResult = totalClasses > 0 ? Math.round((totalAttended / totalClasses) * 100) : 0;
       const gradeLabel = getGrade(overallResult);
-      const flexMessage = `📊 My attendance stats: ${overallResult}% overall across ${attendances.length} subjects! ${gradeLabel.label}`;
+      const flexMessage = `My attendance stats: ${overallResult}% overall across ${attendances.length} subjects! ${gradeLabel.label}`;
+      const senderName = localStorage.getItem('chatUsername') || "Anonymous";
 
-      await api.post('/messages', { content: flexMessage });
+      await api.post('/messages', { content: flexMessage, senderName });
       
       showToast('💬 Stats flexed to Global Chat!');
       setTimeout(() => onNavClick('chat'), 1000);
@@ -495,7 +505,7 @@ const ProfessorsScreen = ({ onNavClick }) => {
         {activeTab === "professors" ? (
           <>
             <div className="flex justify-between items-center mb-2">
-              <SearchBar />
+              <SearchBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
               <button
                 onClick={() => setShowAddModal(true)}
                 className="bg-primary/10 text-primary-mid px-3 py-2 rounded-xl text-xs font-semibold hover:bg-primary/20 transition-colors ml-2 whitespace-nowrap"
@@ -513,7 +523,6 @@ const ProfessorsScreen = ({ onNavClick }) => {
               sortedProfessors.map((prof, idx) => (
                 <ProfCard
                   key={prof.name}
-                  rank={idx + 1}
                   initials={prof.initials}
                   name={prof.name}
                   subject={prof.subject}
@@ -538,7 +547,7 @@ const ProfessorsScreen = ({ onNavClick }) => {
         ) : (
           <>
             <div className="flex justify-between items-center mb-2">
-              <SearchBar />
+              <SearchBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
               <div className="flex gap-2 ml-2">
                 <button
                   onClick={() => setShowAddAttendanceModal(true)}
@@ -586,7 +595,9 @@ const ProfessorsScreen = ({ onNavClick }) => {
                 </button>
               </div>
             ) : (
-              attendances.map((record) => {
+              attendances
+                .filter((record) => record.subject.toLowerCase().includes(searchQuery.toLowerCase()) || record.prof.toLowerCase().includes(searchQuery.toLowerCase()))
+                .map((record) => {
                 const percent =
                   record.total > 0
                     ? Math.round((record.attended / record.total) * 100)
@@ -813,7 +824,7 @@ const ProfessorsScreen = ({ onNavClick }) => {
               <select
                 value={newAttendance.professorId}
                 onChange={(e) =>
-                  setNewAttendance({ ...newAttendance, professorId: e.target.value })
+                  setNewAttendance({ ...newAttendance, professorId: e.target.value, subject: "" })
                 }
                 className="bg-bg2 border border-border rounded-xl px-3 py-2 text-sm text-text outline-none focus:border-primary transition-colors"
                 style={{ colorScheme: "dark" }}
@@ -827,14 +838,37 @@ const ProfessorsScreen = ({ onNavClick }) => {
                   </option>
                 ))}
               </select>
-              <input
-                value={newAttendance.subject}
-                onChange={(e) =>
-                  setNewAttendance({ ...newAttendance, subject: e.target.value })
-                }
-                placeholder="Subject Name (e.g., Data Structures)"
-                className="bg-bg2 border border-border rounded-xl px-3 py-2 text-sm text-text outline-none focus:border-primary transition-colors"
-              />
+              {newAttendance.professorId ? (
+                <select
+                  value={newAttendance.subject}
+                  onChange={(e) =>
+                    setNewAttendance({ ...newAttendance, subject: e.target.value })
+                  }
+                  className="bg-bg2 border border-border rounded-xl px-3 py-2 text-sm text-text outline-none focus:border-primary transition-colors cursor-pointer"
+                  style={{ colorScheme: "dark" }}
+                >
+                  <option value="" disabled className="text-text3">
+                    Select Subject
+                  </option>
+                  {professors
+                    .find((p) => p.id === newAttendance.professorId)
+                    ?.subjectsArray?.map((sub, idx) => (
+                      <option key={idx} value={sub}>
+                        {sub}
+                      </option>
+                    ))}
+                </select>
+              ) : (
+                <input
+                  value={newAttendance.subject}
+                  onChange={(e) =>
+                    setNewAttendance({ ...newAttendance, subject: e.target.value })
+                  }
+                  placeholder="Subject Name (e.g., Data Structures)"
+                  className="bg-bg2 border border-border rounded-xl px-3 py-2 text-sm text-text outline-none focus:border-primary transition-colors cursor-not-allowed opacity-50"
+                  disabled
+                />
+              )}
             </div>
             <div className="flex gap-3 mt-5">
               <button

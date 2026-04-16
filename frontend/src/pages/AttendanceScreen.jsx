@@ -80,7 +80,13 @@ const AttendanceScreen = ({ onNavClick }) => {
     const fetchAttendance = async () => {
       try {
         const response = await api.get('/attendance');
-        setSubjects(response.data.data || []);
+        const mapped = (response.data.data || []).map(att => ({
+          ...att,
+          name: att.subject,
+          present: att.classAttended,
+          total: att.totalClasses
+        }));
+        setSubjects(mapped);
       } catch (err) {
         console.error("Error fetching attendance:", err);
       } finally {
@@ -102,6 +108,28 @@ const AttendanceScreen = ({ onNavClick }) => {
     return { label: 'Danger Zone 💀', color: '#E24B4A', bg: 'rgba(226,75,74,0.1)' };
   };
 
+  const handleMarkAttendance = async (id, status) => {
+    try {
+      await api.patch(`/attendance/${id}`, { attended: status === "attend" });
+      setSubjects(prev =>
+        prev.map(sub => {
+          if (sub._id === id) {
+            return {
+              ...sub,
+              present: status === "attend" ? (sub.present || 0) + 1 : (sub.present || 0),
+              total: (sub.total || 0) + 1
+            };
+          }
+          return sub;
+        })
+      );
+      showToast(`Marked ${status === "attend" ? "Present" : "Absent"}!`);
+    } catch (err) {
+      console.error(err);
+      showToast('Failed to mark attendance.');
+    }
+  };
+
   const getBarColor = (p) => {
     if (p >= 75) return '#1D9E75';
     if (p >= 60) return '#EF9F27';
@@ -119,10 +147,11 @@ const AttendanceScreen = ({ onNavClick }) => {
   const handleShare = async () => {
     try {
       const grade = getGrade(overall);
-      const flexMessage = `📊 My attendance stats: ${overall}% overall across ${subjects.length} subjects! ${grade.label}`;
+      const flexMessage = `My attendance stats: ${overall}% overall across ${subjects.length} subjects! ${grade.label}`;
+      const senderName = localStorage.getItem('chatUsername') || "Anonymous";
       
       // We directly send it via our api or we can use socket, but simplest to tell the backend to send a message
-      await api.post('/messages', { content: flexMessage });
+      await api.post('/messages', { content: flexMessage, senderName });
       
       showToast('💬 Stats flexed to Global Chat!');
       setTimeout(() => onNavClick('chat'), 1000);
@@ -275,7 +304,10 @@ const AttendanceScreen = ({ onNavClick }) => {
               <div className="w-16 h-16 rounded-2xl bg-bg2 border border-border flex items-center justify-center text-3xl mb-4">📚</div>
               <p className="text-text2 text-sm font-medium mb-1">No subjects yet</p>
               <p className="text-text3 text-xs mb-5">Start tracking your attendance to see stats here</p>
-              <button className="px-5 py-2.5 bg-primary/15 border border-primary/25 text-primary-mid text-sm rounded-xl font-medium hover:bg-primary/25 transition-colors">
+              <button 
+                onClick={() => onNavClick('professors', 'attendance')}
+                className="px-5 py-2.5 bg-primary/15 border border-primary/25 text-primary-mid text-sm rounded-xl font-medium hover:bg-primary/25 transition-colors cursor-pointer"
+              >
                 + Add Subject
               </button>
             </div>
@@ -338,12 +370,14 @@ const AttendanceScreen = ({ onNavClick }) => {
                     </span>
                     <div className="flex gap-1">
                       <button 
-                        className="text-[10px] px-2.5 py-1 rounded-lg bg-accent-teal/10 border border-accent-teal/20 text-accent-teal font-medium hover:bg-accent-teal/20 active:scale-95 transition-all"
+                        onClick={() => handleMarkAttendance(sub._id, 'attend')}
+                        className="text-[10px] px-2.5 py-1 rounded-lg bg-accent-teal/10 border border-accent-teal/20 text-accent-teal font-medium hover:bg-accent-teal/20 active:scale-95 transition-all cursor-pointer"
                       >
                         ✓ Present
                       </button>
                       <button 
-                        className="text-[10px] px-2.5 py-1 rounded-lg bg-bg3 border border-border text-text3 font-medium hover:bg-bg4 active:scale-95 transition-all"
+                        onClick={() => handleMarkAttendance(sub._id, 'bunk')}
+                        className="text-[10px] px-2.5 py-1 rounded-lg bg-bg3 border border-border text-text3 font-medium hover:bg-bg4 active:scale-95 transition-all cursor-pointer"
                       >
                         ✗ Absent
                       </button>
