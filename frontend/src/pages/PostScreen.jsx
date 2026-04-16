@@ -204,6 +204,25 @@ const PostScreen = ({ onNavClick, postData }) => {
     }
   };
 
+  // Check if this is an attendance flex post
+  let isAttendanceFlex = false;
+  let flexData = null;
+  let displayContent = post?.content || "";
+
+  if (post?.content?.includes('[ATTENDANCE_FLEX]')) {
+    isAttendanceFlex = true;
+    const parts = post.content.split('[ATTENDANCE_FLEX]');
+    displayContent = parts[0].trim();
+    try {
+      flexData = JSON.parse(parts[1]);
+    } catch (e) {
+      console.error("Failed to parse flex data", e);
+    }
+  } else if (post?.tags?.toLowerCase() === 'attendance' && (post?.title?.toLowerCase().includes('flex') || post?.content?.toLowerCase().includes('attendance'))) {
+    // Legacy support for older posts
+    isAttendanceFlex = true;
+  }
+
   return (
     <div className="flex flex-col flex-1 overflow-hidden bg-bg relative min-h-full">
       {/* Top Navbar */}
@@ -246,7 +265,31 @@ const PostScreen = ({ onNavClick, postData }) => {
 
         {/* Post Content */}
         <h1 className="text-lg font-bold text-text mb-2 tracking-tight">{post?.title}</h1>
-        <p className="text-sm leading-relaxed text-text mt-2 mb-4">{post?.content}</p>
+        {isAttendanceFlex ? (
+          <div className="relative z-10 mb-4">
+            <div className="text-sm leading-relaxed text-text mb-3 whitespace-pre-wrap">{displayContent}</div>
+            {/* Inline flex visual */}
+            <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-bg via-emerald-950/20 to-[#0E0D14] p-4 shadow-[0_0_15px_rgba(16,185,129,0.1)]">
+              <div className="absolute -top-6 -right-6 w-24 h-24 bg-emerald-500/20 rounded-full blur-2xl pointer-events-none" />
+              <div className="relative z-10 flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <div>
+                    <span className="text-xs text-text3 uppercase tracking-wider font-bold block mb-1">Attendance Flex</span>
+                    {flexData ? (
+                      <span className="text-sm text-emerald-400 font-bold tracking-wide">
+                        {flexData.subject} • {flexData.percent}% • Bunk: {flexData.canBunk}
+                      </span>
+                    ) : (
+                      <span className="text-sm text-emerald-400 font-bold tracking-wide">Dynamic Stats Shared</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm leading-relaxed text-text mt-2 mb-4 whitespace-pre-wrap">{displayContent}</p>
+        )}
 
         {/* Action Bar */}
         <div className="flex items-center justify-start flex-wrap gap-2 py-3 border-border mb-4">

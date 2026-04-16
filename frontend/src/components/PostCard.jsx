@@ -70,7 +70,7 @@ const PostCard = ({ id, handle, handleId, isLiked = false, likes, comments, onCl
   let flexData = null;
   let displayContent = content || "I am not okay.";
 
-  if (category?.toLowerCase() === 'attendance' && content?.includes('[ATTENDANCE_FLEX]')) {
+  if (content?.includes('[ATTENDANCE_FLEX]')) {
     isAttendanceFlex = true;
     const parts = content.split('[ATTENDANCE_FLEX]');
     displayContent = parts[0].trim();
@@ -79,7 +79,7 @@ const PostCard = ({ id, handle, handleId, isLiked = false, likes, comments, onCl
     } catch (e) {
       console.error("Failed to parse flex data", e);
     }
-  } else if (category?.toLowerCase() === 'attendance' && (title?.toLowerCase().includes('flex') || content?.includes('attendance'))) {
+  } else if (category?.toLowerCase() === 'attendance' && (title?.toLowerCase().includes('flex') || content?.toLowerCase().includes('attendance'))) {
     // Legacy support for older posts
     isAttendanceFlex = true;
   }

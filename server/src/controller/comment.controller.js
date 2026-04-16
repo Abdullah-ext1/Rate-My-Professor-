@@ -29,13 +29,14 @@ const createAComment = asyncHandler(async(req, res) => {
   })
 
   if (post.owner.toString() !== req.user.id.toString()) {
+    const snippet = content || post.title || post.content || 'your post';
     await createNotification({
       userId: post.owner,
       senderId: req.user.id,
     type: "comment",
     postId: post._id,
     commentId: createComment._id,
-    content: "Somebody commented on your post"
+    content: snippet.substring(0, 60) + (snippet.length > 60 ? '...' : '')
     })
   }
   
@@ -74,12 +75,13 @@ const replyToAComment = asyncHandler(async(req, res) => {
   )
 
   if (comment.user.toString() !== req.user.id.toString()) {
+    const snippet = content || 'your comment';
     await createNotification({
       userId: comment.user,
       senderId: req.user.id,
   type: "comment",
   commentId: comment.id,
-  content: "Somebody replied to your comment"
+  content: snippet.substring(0, 60) + (snippet.length > 60 ? '...' : '')
     });
   }
 

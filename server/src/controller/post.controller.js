@@ -73,12 +73,16 @@ const likeAPost = asyncHandler(async(req, res) => {
   )
 
   if(!alreadyLiked && post.owner.toString() !== req.user.id.toString()){
+    let snippet = post.title || post.content || 'your post';
+    if (snippet.includes('[ATTENDANCE_FLEX]')) {
+      snippet = snippet.split('[ATTENDANCE_FLEX]')[0].trim() || 'Shared their attendance stats';
+    }
     const notifcation = await createNotification({
       userId: post.owner,
       senderId: req.user.id,
       type: 'like',
       postId: post._id,
-      content: 'Someone liked your post'
+      content: snippet.substring(0, 60) + (snippet.length > 60 ? '...' : '')
     })
     return res.status(200).json(new ApiResponse(200, [notifcation, updateLike], "Video was liked successfully"))
   }
