@@ -1,9 +1,21 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { Rating } from "../models/rating.models.js";
+import { getCollegeFilter } from "../utils/collegeFilter.js";
 import mongoose from "mongoose";
 
 const getLeaderboard = asyncHandler(async (req, res) => {
+    const filter = getCollegeFilter(req.user);
+    const matchFilter = {};
+    if (filter.college) {
+        matchFilter["professorDetails.college"] = new mongoose.Types.ObjectId(filter.college);
+    }
+    
+    // Also only include approved professors
+    if (req.user.role !== 'admin') {
+        matchFilter["professorDetails.isApproved"] = true;
+    }
+
     const leaderboard = await Rating.aggregate([
         {
             $lookup: {
@@ -13,10 +25,9 @@ const getLeaderboard = asyncHandler(async (req, res) => {
                 as: "professorDetails"
             }
         },
+        { $unwind: "$professorDetails" },
         {
-            $match: {
-                "professorDetails.college": new mongoose.Types.ObjectId(req.user.college)
-            }
+            $match: matchFilter
         },
         {
             $group: {
@@ -32,15 +43,21 @@ const getLeaderboard = asyncHandler(async (req, res) => {
         {
             $limit: 10
         }
-
     ])
+
+    // Format the response structure to wrap professorDetails in an array 
+    // to match the frontend's expectation: item.professorDetails[0]?.name
+    const formattedLeaderboard = leaderboard.map(item => ({
+        ...item,
+        professorDetails: [item.professorDetails]
+    }));
 
     return res
         .status(200)
         .json(
             new ApiResponse(
                 200,
-                leaderboard,
+                formattedLeaderboard,
                 "Leaderboard fetched successfully"
             )
         )   
