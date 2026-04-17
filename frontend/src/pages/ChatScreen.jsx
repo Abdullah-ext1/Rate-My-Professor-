@@ -101,11 +101,37 @@ const ChatScreen = ({ onNavClick }) => {
     }
     fetchMessages()
 
-    socketRef.current = io(import.meta.env.VITE_BACKEND_URL.replace('/api', ''), {
+    // Only connect socket if token exists
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      console.warn("No token found, socket connection skipped");
+      return;
+    }
+
+    const socketUrl = import.meta.env.VITE_BACKEND_URL.replace('/api', '');
+    console.log("Connecting to socket:", socketUrl);
+    
+    socketRef.current = io(socketUrl, {
       withCredentials: true,
       auth: {
-        token: localStorage.getItem('accessToken')
-      }
+        token: token
+      },
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      reconnectionAttempts: 5
+    })
+
+    socketRef.current.on('connect', () => {
+      console.log('Socket connected:', socketRef.current.id);
+    })
+
+    socketRef.current.on('connect_error', (error) => {
+      console.error('Socket connection error:', error);
+    })
+
+    socketRef.current.on('disconnect', () => {
+      console.log('Socket disconnected');
     })
 
     socketRef.current.on('message', (newMessage) => {
@@ -116,6 +142,7 @@ const ChatScreen = ({ onNavClick }) => {
     })
 
     socketRef.current.on('onlineUsers', (users) => {
+      console.log('Online users:', users);
       setOnlineCount(users.length)
     })
 
@@ -199,7 +226,7 @@ const ChatScreen = ({ onNavClick }) => {
   return (
     <div className="flex flex-col flex-1 overflow-hidden bg-bg relative">
       {!hasEntered && (
-        <div className="absolute inset-0 z-[100] bg-bg flex flex-col items-center justify-center p-6 text-center">
+        <div className="fixed inset-0 z-[100] bg-bg flex flex-col items-center justify-center p-6 text-center h-[100dvh] overflow-hidden overscroll-none touch-none">
           <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-3xl mb-6">👻</div>
           <h1 className="text-2xl font-bold text-text mb-2 font-syne">Enter Campus Chat</h1>
           <p className="text-sm text-text3 mb-8 max-w-[260px]">Choose an anonymous identity to join the conversation.</p>
