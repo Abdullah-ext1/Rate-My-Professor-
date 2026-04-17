@@ -172,6 +172,7 @@ const AppLayout = () => {
           
           <Route path="/onboarding" element={<div className="animate-fade-in"><OnBoardingScreen /></div>} />
           <Route path="/" element={<RootRedirect/>} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
 

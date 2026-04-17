@@ -29,7 +29,7 @@ const createMessage = asyncHandler(async (req, res) => {
     if (io) {
         io.emit("message", populatedMessage);
     }
-    
+
     return res
         .status(201)
         .json(
@@ -41,7 +41,25 @@ const createMessage = asyncHandler(async (req, res) => {
         );
 });
 
+const deleteMessage = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    
+    if (req.user.role !== 'admin' && req.user.role !== 'moderator') {
+        return res.status(403).json(new ApiResponse(403, null, "Not authorized to delete messages"));
+    }
+
+    await Message.findByIdAndDelete(id);
+
+    const io = req.app.get('io');
+    if (io) {
+        io.emit("messageDeleted", id);
+    }
+
+    return res.status(200).json(new ApiResponse(200, null, "Message deleted successfully"));
+});
+
 export {
     getMessages,
-    createMessage
+    createMessage,
+    deleteMessage
 }
