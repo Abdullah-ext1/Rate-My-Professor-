@@ -101,8 +101,11 @@ const ChatScreen = ({ onNavClick }) => {
     }
     fetchMessages()
 
-    socketRef.current = io('http://localhost:9000', {
-      withCredentials: true
+    socketRef.current = io(import.meta.env.VITE_BACKEND_URL.replace('/api', ''), {
+      withCredentials: true,
+      auth: {
+        token: localStorage.getItem('accessToken')
+      }
     })
 
     socketRef.current.on('message', (newMessage) => {
