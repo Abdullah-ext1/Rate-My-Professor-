@@ -256,6 +256,7 @@ const ProfileScreen = ({ onNavClick, currentUserRole }) => {
           <button 
             onClick={async () => {
               await api.post('/auth/logout');
+              localStorage.removeItem('accessToken');
               window.location.href = '/login';
             }}
 

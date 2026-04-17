@@ -19,13 +19,7 @@ router.get("/google/callback", passport.authenticate("google", {session: false})
       process.env.JWT_SECRET,
       { expiresIn: "7d"},
     )
-    res.cookie("accessToken", token, {
-      httpOnly: true,
-      sameSite: "none",
-      secure: true,
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    })
-    res.redirect("https://campus-three-black.vercel.app/")
+    res.redirect(`https://campus-three-black.vercel.app/?token=${token}`)
   },
 )
 

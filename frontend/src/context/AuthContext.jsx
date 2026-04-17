@@ -10,7 +10,7 @@ export const AuthProvider = ({ children }) => {
   const fetchUser = async () => {
     try {
       setLoading(true);
-      const response = await api.get("/auth/me", { withCredentials: true });
+      const response = await api.get("/auth/me");
       setUser(response.data.data);
     } catch (error) {
       setUser(null);
@@ -20,7 +20,18 @@ export const AuthProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    fetchUser();
+    // Check if token is in URL from OAuth callback
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    
+    if (token) {
+      localStorage.setItem('accessToken', token);
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+      fetchUser();
+    } else {
+      fetchUser();
+    }
   }, []);
 
   return (
