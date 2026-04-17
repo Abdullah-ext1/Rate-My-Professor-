@@ -18,8 +18,6 @@ const ChatScreen = ({ onNavClick }) => {
   const [tempName, setTempName] = useState('');
   const [animKey, setAnimKey] = useState(0);
 
-  // Mock current user role for testing UI 
-  const currentUserRole = 'admin'; 
   const [activeMessageId, setActiveMessageId] = useState(null);
   
   const [confirmAction, setConfirmAction] = useState({ isOpen: false, action: null, targetId: null, title: '', message: '', confirmText: '', confirmColor: 'bg-red-500' });
@@ -291,7 +289,7 @@ const ChatScreen = ({ onNavClick }) => {
                 <span className="text-xs font-medium text-text2">{msg.senderName && msg.senderName !== 'Anonymous' ? msg.senderName : (msg.sender._id === user?._id ? (username || 'you') : 'Anonymous')}</span>
                 <span className="text-xs px-1.5 py-0.5 rounded-lg border border-opacity-30 border-primary bg-opacity-10 bg-primary text-primary-mid font-medium">{msg.sender._id === user?._id ? 'rizvi' : 'rizvi'}</span>
                 <span className="text-xs text-text3">{new Date(msg.createdAt).toLocaleTimeString()}</span>
-                {msg.sender._id !== user?._id && (currentUserRole === 'admin' || currentUserRole === 'moderator') && (
+                {msg.sender._id !== user?._id && (user?.role === 'admin' || user?.role === 'moderator') && (
                    <span className="text-text3 text-xs ml-1 px-1 hover:text-text transition-colors">•••</span>
                 )}
               </div>
@@ -332,7 +330,7 @@ const ChatScreen = ({ onNavClick }) => {
               </div>
 
               {/* Moderation Dropdown */}
-              {activeMessageId === msg._id && msg.sender._id !== user?._id && (
+              {activeMessageId === msg._id && msg.sender._id !== user?._id && (user?.role === 'admin' || user?.role === 'moderator') && (
                 <div className="absolute top-6 left-0 z-50 bg-bg2 border border-border rounded-xl shadow-lg p-1 w-40 flex flex-col gap-1">
                    <button 
                      onClick={() => openConfirm('delete', msg._id, "Delete Message", "Are you sure you want to delete this message?", "Delete")}
@@ -340,7 +338,7 @@ const ChatScreen = ({ onNavClick }) => {
                    >
                      Delete Message
                    </button>
-                   {(currentUserRole === 'admin' || currentUserRole === 'moderator') && (
+                   {(user?.role === 'admin' || user?.role === 'moderator') && (
                      <button 
                        onClick={() => openConfirm('suspend', null, "Suspend User", "Are you sure you want to suspend this user for 15 days?", "Suspend", 'bg-accent-amber')}
                        className="text-left px-3 py-2 text-xs font-medium text-accent-amber hover:bg-accent-amber/10 rounded-lg transition-colors cursor-pointer"
@@ -348,7 +346,7 @@ const ChatScreen = ({ onNavClick }) => {
                        Suspend (15 days)
                      </button>
                    )}
-                   {currentUserRole === 'admin' && msg.senderDetails?.role !== 'admin' && (
+                   {user?.role === 'admin' && msg.senderDetails?.role !== 'admin' && (
                      <>
                        {msg.senderDetails?.role !== 'moderator' ? (
                          <button 
