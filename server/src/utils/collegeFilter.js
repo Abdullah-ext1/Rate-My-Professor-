@@ -14,4 +14,4 @@ const getCollegeFilter = (user) => {
   return {};
 }
 
-export { getCollegeFilter }
+export { getCollegeFilter };
