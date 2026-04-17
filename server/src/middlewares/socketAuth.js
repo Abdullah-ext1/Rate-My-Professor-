@@ -5,11 +5,14 @@ import { ApiError } from "../utils/ApiError.js"
 const socketAuth = async (socket, next) => {
 
   try {
-const token = socket.handshake.auth?.token 
-  || socket.handshake.headers?.authorization?.replace("Bearer ", "")
-  || socket.handshake.headers?.cookie?.split('accessToken=')?.[1]?.split(';')?.[0]
+    const token = socket.handshake.auth?.token 
+      || socket.handshake.headers?.authorization?.replace("Bearer ", "")
+      || socket.handshake.headers?.cookie?.split('accessToken=')?.[1]?.split(';')?.[0]
+    
+    console.log("Socket auth token:", token ? "found" : "not found")
+    
     if (!token) {
-      throw new ApiError(401, "Token generation was unsucessfull")
+      throw new ApiError(401, "No authentication token provided")
     }
 
     const decodeToken = jwt.verify(token, process.env.JWT_SECRET)
@@ -27,6 +30,7 @@ const token = socket.handshake.auth?.token
     next()
   }
   catch (error) {
+    console.error("Socket auth error:", error?.message)
     next(new Error(error?.message || "Wasn't able to verify the token"))
   }
 }

@@ -6,13 +6,15 @@ let onlineUsers = []
 export function initChat(io) {
   io.use(socketAuth)
   io.on("connection", (socket) => {
-    console.log("user connected:", socket.id)
+    console.log("user connected:", socket.id, "user:", socket.user.name)
 
     onlineUsers.push({
       name: socket.user.name,
       college: socket.user.college,
       socketId: socket.id
     })
+    
+    // Emit to all clients
     io.emit("onlineUsers", onlineUsers)
 
     socket.on("sendMessage", async (data) => {
@@ -20,11 +22,13 @@ export function initChat(io) {
         const message = await Message.create({
           sender: socket.user._id,
           college: socket.user.college,
-          content: data.content, senderName: data.senderName || 'Anonymous',
+          content: data.content, 
+          senderName: data.senderName || 'Anonymous',
         })
         const populatedMessage = await message.populate("sender", "name avatar _id")
         io.emit("message", populatedMessage)
       } catch (error) {
+        console.error("Error sending message:", error)
         socket.emit("error", { message: "Failed to send message" })
       }
     })

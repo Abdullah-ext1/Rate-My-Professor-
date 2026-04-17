@@ -47,7 +47,8 @@ const getProfessor = asyncHandler(async (req, res) => {
 
     const filter = getCollegeFilter(req.user)
     if (req.user.role !== 'admin' && req.user.role !== 'moderator') {
-        filter.isApproved = true;
+        // Regular users can see all professors (no approval filter)
+        // They just see a filtered view based on their college
     } else {
         if (req.query.isApproved !== undefined) {
             if (req.query.isApproved === 'false') {
@@ -186,7 +187,7 @@ const searchProfessor = asyncHandler(async (req, res) => {
     }
 
     if (req.user.role !== 'admin' && req.user.role !== 'moderator') {
-        filter.isApproved = true;
+        // Regular users can see all professors (no approval filter)
     } else {
         if (req.query.isApproved !== undefined) {
             filter.isApproved = req.query.isApproved === 'true';
