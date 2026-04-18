@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import LoginScreen from './pages/LoginScreen';
 import FeedScreen from './pages/FeedScreen';
@@ -34,6 +34,57 @@ const AppLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [selectedPost, setSelectedPost] = useState(null);
+
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [showPwaPrompt, setShowPwaPrompt] = useState(false);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+
+      // Show after 5 seconds if not already installed
+      if (!isStandalone) {
+        setTimeout(() => {
+          setShowPwaPrompt(true);
+        }, 5000);
+      }
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    // Fallback for iOS detection
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+
+    if (isIOS && !isStandalone) {
+      setTimeout(() => {
+        setShowPwaPrompt(true);
+      }, 5000);
+    }
+
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+  }, []);  const handleInstallPwa = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setDeferredPrompt(null);
+      }
+    } else {
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+      if (isIOS) {
+        alert('To install this app on your iOS device, tap the "Share" button and then "Add to Home Screen".');
+      }
+    }
+    setShowPwaPrompt(false);
+  };
+
+  const handleDismissPwa = () => {
+    setShowPwaPrompt(false);
+  };
 
   const handleNavClick = (screen, data = null) => {
     if (screen === 'post' && data) {
@@ -175,6 +226,39 @@ const AppLayout = () => {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
+
+      {showPwaPrompt && (
+        <div className="fixed top-4 left-4 right-4 z-50 animate-slide-up">
+          <div className="bg-bg2 border border-primary/30 rounded-2xl p-4 shadow-xl shadow-primary/10 flex items-center gap-4 relative">
+            <button 
+              onClick={handleDismissPwa}
+              className="absolute top-2 right-2 text-text3 hover:text-text p-1"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+            <div className="w-12 h-12 rounded-xl bg-primary/20 flex flex-shrink-0 items-center justify-center text-primary">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-bold text-text font-syne mb-0.5">Install App</h3>
+              <p className="text-[10px] text-text3 mb-2 leading-tight">Get the native mobile experience for a better UI.</p>
+              <button 
+                onClick={handleInstallPwa}
+                className="bg-primary hover:bg-primary-dark text-white text-xs font-semibold py-1.5 px-4 rounded-lg transition-colors w-max"
+              >
+                Install Now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Fixed Footer - Only shown when not on login screen */}
       {currentScreen !== 'login' && currentScreen !== 'onboarding' && (
