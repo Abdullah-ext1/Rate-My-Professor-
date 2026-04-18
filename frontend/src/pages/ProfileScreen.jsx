@@ -149,19 +149,11 @@ const ProfileScreen = ({ onNavClick, currentUserRole }) => {
     };
     
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    
-    // Poll for the global prompt in case it was set slightly after mount
-    const checkInterval = setInterval(() => {
-      if (window._deferredPrompt && !deferredPrompt) {
-        setDeferredPrompt(window._deferredPrompt);
-      }
-    }, 1000);
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-      clearInterval(checkInterval);
     };
-  }, [deferredPrompt]);
+  }, []);
 
   const handleInstallClick = async () => {
     if (deferredPrompt) {
@@ -169,6 +161,7 @@ const ProfileScreen = ({ onNavClick, currentUserRole }) => {
       const { outcome } = await deferredPrompt.userChoice;
       if (outcome === 'accepted') {
         setDeferredPrompt(null);
+        window._deferredPrompt = null;
       }
     } else {
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;

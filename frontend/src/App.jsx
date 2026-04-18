@@ -48,6 +48,8 @@ const AppLayout = () => {
   const [showPwaPrompt, setShowPwaPrompt] = useState(false);
 
   useEffect(() => {
+    let timerId;
+
     const handleBeforeInstallPrompt = (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
@@ -57,7 +59,7 @@ const AppLayout = () => {
 
       // Show after 5 seconds if not already installed
       if (!isStandalone) {
-        setTimeout(() => {
+        timerId = setTimeout(() => {
           setShowPwaPrompt(true);
         }, 5000);
       }
@@ -70,18 +72,24 @@ const AppLayout = () => {
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
 
     if (isIOS && !isStandalone) {
-      setTimeout(() => {
+      timerId = setTimeout(() => {
         setShowPwaPrompt(true);
       }, 5000);
     }
 
-    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-  }, []);  const handleInstallPwa = async () => {
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      if (timerId) clearTimeout(timerId);
+    };
+  }, []);
+
+  const handleInstallPwa = async () => {
     if (deferredPrompt) {
       deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
       if (outcome === 'accepted') {
         setDeferredPrompt(null);
+        window._deferredPrompt = null;
       }
     } else {
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;

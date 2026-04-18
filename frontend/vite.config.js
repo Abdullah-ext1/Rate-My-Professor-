@@ -23,20 +23,21 @@ export default defineConfig({
         start_url: '/',
         icons: [
           {
-            src: '/campus_logo.svg',
-            sizes: 'any',
-            type: 'image/svg+xml',
+            src: '/icon-192x192.png',
+            sizes: '192x192',
+            type: 'image/png',
             purpose: 'any maskable'
           },
           {
-            src: '/campus_logo.svg',
-            sizes: '192x192',
-            type: 'image/svg+xml'
+            src: '/icon-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any maskable'
           },
           {
-            src: '/campus_logo.svg',
+            src: '/icon-512x512.png',
             sizes: '512x512',
-            type: 'image/svg+xml'
+            type: 'image/png'
           }
         ]
       }
