@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useLocation } from "react-router-dom";
 import api from "../context/api.js";
 import { useQueryClient } from '@tanstack/react-query';
+import toast from 'react-hot-toast';
 
 const TopNav = ({ onNavClick }) => (
   <div className="fixed top-0 left-0 right-0 bg-bg px-4 py-2.5 flex items-center gap-3 flex-shrink-0 border-b border-border z-30">
@@ -93,6 +94,7 @@ const RateProfessorScreen = ({ onNavClick }) => {
         );
         queryClient.invalidateQueries({ queryKey: ['professorReviews', professor.id] });
         queryClient.invalidateQueries({ queryKey: ['professors'] });
+        toast.success("Professor rating submitted!", { id: 'rate-prof', duration: 2000 });
         onNavClick("professors");
       } catch (error) {
         console.error("Error submitting rating:", error);

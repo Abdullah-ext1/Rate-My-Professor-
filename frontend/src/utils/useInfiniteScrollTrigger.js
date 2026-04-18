@@ -5,11 +5,25 @@ export const useInfiniteScrollTrigger = ({
   enabled,
   onLoadMore,
   root = null,
-  rootMargin = '300px',
+  rootMargin = '800px',
   threshold = 0
 }) => {
   useEffect(() => {
     if (!enabled || !targetRef?.current) return;
+
+    // Use closest scrollable parent as root if no root is explicitly provided
+    let actualRoot = root;
+    if (!actualRoot) {
+        let parent = targetRef.current.parentElement;
+        while (parent && parent !== document.body) {
+            const overflowY = window.getComputedStyle(parent).overflowY;
+            if (overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay') {
+                actualRoot = parent;
+                break;
+            }
+            parent = parent.parentElement;
+        }
+    }
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -19,7 +33,7 @@ export const useInfiniteScrollTrigger = ({
         }
       },
       {
-        root,
+        root: actualRoot,
         rootMargin,
         threshold
       }

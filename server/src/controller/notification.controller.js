@@ -80,9 +80,20 @@ const getAllNotifications = asyncHandler(async (req, res) => {
   )
 })
 
+const getUnreadCount = asyncHandler(async(req, res) => {
+  const unreadCount = await Notification.countDocuments({
+    recipient: req.user._id,
+    isRead: false
+  })
+
+  return res.status(200).json(
+    new ApiResponse(200, unreadCount, "Unread count fetched successfully")
+  )
+})
 
 export {
   createNotification,
   markAsRead,
   getAllNotifications,
+  getUnreadCount
 }

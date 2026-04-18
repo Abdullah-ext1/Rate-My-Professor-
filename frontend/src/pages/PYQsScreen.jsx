@@ -3,6 +3,7 @@ import { PYQSkeleton } from "../components/Skeleton";
 import { useAuth } from "../context/AuthContext";
 import api from "../context/api.js";
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import toast from 'react-hot-toast';
 
 const TopNav = ({ onNavClick }) => {
   const { user } = useAuth();
@@ -158,6 +159,7 @@ const UploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
         setSubjectName('')
         setYear('')
         setFileUrl('')
+        toast.success(`${type} submitted! Pending review.`, { id: 'submit-pyq', duration: 2500 });
         onClose()
       }
     } catch (err) {
