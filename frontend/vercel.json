@@ -1,5 +1,5 @@
 {
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/(?!manifest|sw|registerSW|assets|icon|campus_logo)", "destination": "/index.html" }
   ]
 }
