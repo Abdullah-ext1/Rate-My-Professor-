@@ -39,6 +39,7 @@ const markAsRead = asyncHandler(async (req, res) => {
 })
 
 const getAllNotifications = asyncHandler(async (req, res) => {
+  const isPaginatedRequest = req.query.page !== undefined || req.query.limit !== undefined
   const page = Math.max(Number(req.query.page) || 1, 1)
   const limit = Math.max(Number(req.query.limit) || 10, 1)
   const skip = (page - 1) * limit
@@ -54,6 +55,14 @@ const getAllNotifications = asyncHandler(async (req, res) => {
     .limit(limit)
 
   const hasMore = skip + allNotification.length < total
+
+  if (!isPaginatedRequest) {
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(200, allNotification, "All Notification's fetched successfully")
+      )
+  }
 
   return res
   .status(200)
