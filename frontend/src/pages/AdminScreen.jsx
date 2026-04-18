@@ -1,127 +1,102 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import ConfirmModal from '../components/ConfirmModal';
 import api from '../context/api';
 import { useAuth } from '../context/AuthContext';
 import { timeAgo } from '../utils/timeAgo';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 const AdminScreen = ({ onNavClick, onBack }) => {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
   const isModerator = user?.role === 'moderator' || isAdmin;
+  const queryClient = useQueryClient();
 
   const [activeTab, setActiveTab] = useState('pending'); // 'pending' | 'moderators' | 'professors'
-  const [pendingUsers, setPendingUsers] = useState([]);
-  const [pendingProfessors, setPendingProfessors] = useState([]);
-  const [loading, setLoading] = useState(false);
-  // id name email role joinDate
 
-  // Mock data for moderators
-  const [moderators, setModerators] = useState([]);
+  const { data: pendingUsers = [], isLoading: loadingUsers, isError: isUsersError, error: usersError } = useQuery({
+    queryKey: ['pendingUsers'],
+    queryFn: async () => {
+      const res = await api.get('/auth/pending-users');
+      return res.data.data;
+    },
+    enabled: activeTab === 'pending'
+  });
+
+  const { data: moderators = [], isError: isModsError, error: modsError } = useQuery({
+    queryKey: ['moderators'],
+    queryFn: async () => {
+      const res = await api.get('/auth/moderators');
+      return res.data.data;
+    },
+    enabled: activeTab === 'moderators' && isAdmin
+  });
+
+  const { data: pendingProfessors = [], isLoading: loadingProfs, isError: isProfError, error: profError } = useQuery({
+    queryKey: ['pendingProfessors'],
+    queryFn: async () => {
+      const res = await api.get('/professor?isApproved=false');
+      return res.data.data;
+    },
+    enabled: activeTab === 'professors' && isAdmin
+  });
+
+  const loading = loadingUsers || loadingProfs;
 
   const [selectedMod, setSelectedMod] = useState(null);
   const [confirmAction, setConfirmAction] = useState({ isOpen: false, modId: null });
 
-  const handleRemoveMod = () => {
-    const modeRemoval = async () => {
-      try {
-        await api.put(`/auth/revoke-moderator/${confirmAction.modId}`);
-        setModerators(prev => prev.filter(mod => mod._id !== confirmAction.modId));
-        if (selectedMod?._id === confirmAction.modId) {
-          setSelectedMod(null)
-        }
-      } catch (error) {
-        console.error("Failed to revoke moderator status", error);
-      } finally {
-        setConfirmAction({ isOpen: false, modId: null });
+  const handleRemoveMod = async () => {
+    try {
+      await api.put(`/auth/revoke-moderator/${confirmAction.modId}`);
+      queryClient.setQueryData(['moderators'], (old) => old.filter(mod => mod._id !== confirmAction.modId));
+      if (selectedMod?._id === confirmAction.modId) {
+        setSelectedMod(null);
       }
-    }
-    modeRemoval();
-  };
-
-  const fetchPendingUsers = async () => {
-    setLoading(true);
-    try {
-      const res = await api.get('/auth/pending-users'); 
-      setPendingUsers(res.data.data);
-    } catch (err) {
-      console.error("Error fetching pending users", err);
+    } catch (error) {
+      console.error("Failed to revoke moderator status", error);
+      alert(error.response?.data?.message || 'Error revoking moderator status');
     } finally {
-      setLoading(false);
+      setConfirmAction({ isOpen: false, modId: null });
     }
   };
-
-  useEffect(() => {
-    if (activeTab === 'pending') {
-      fetchPendingUsers();
-    }
-  }, [activeTab]);
-
-  const fetchModerators = async () => {
-    try {
-      const res = await api.get('/auth/moderators');
-      setModerators(res.data.data);
-    } catch (err) {
-      console.error("Error fetching moderators", err);
-    }
-  };
-
-  useEffect(() => {
-    if (activeTab === 'moderators' && isAdmin) {
-      fetchModerators();
-    }
-  }, [activeTab, isAdmin]);
-
-  const fetchPendingProfessors = async () => {
-    setLoading(true);
-    try {
-      const res = await api.get('/professor?isApproved=false');
-      setPendingProfessors(res.data.data);
-    } catch (err) {
-      console.error("Error fetching pending professors", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (activeTab === 'professors' && isAdmin) {
-      fetchPendingProfessors();
-    }
-  }, [activeTab, isAdmin]);
 
   const handleApprove = async (userId) => {
     try {
       await api.put(`/auth/approve/${userId}`);
-      setPendingUsers(prev => prev.filter(u => u._id !== userId));
+      queryClient.setQueryData(['pendingUsers'], (old) => old.filter(u => u._id !== userId));
     } catch (err) {
       console.error("Approval failed", err);
+      alert(err.response?.data?.message || 'Error occurred during approval');
     }
   };
 
   const handleReject = async (userId) => {
     try {
       await api.put(`/auth/reject/${userId}`, { reason: "Did not meet criteria." });
-      setPendingUsers(prev => prev.filter(u => u._id !== userId));
+      queryClient.setQueryData(['pendingUsers'], (old) => old.filter(u => u._id !== userId));
     } catch (err) {
       console.error("Rejection failed", err);
+      alert(err.response?.data?.message || 'Error occurred during rejection');
     }
   };
 
   const handleApproveProfessor = async (profId) => {
     try {
       await api.put(`/professor/${profId}/moderate`, { isApproved: true });
-      setPendingProfessors(prev => prev.filter(p => p._id !== profId));
+      queryClient.setQueryData(['pendingProfessors'], (old) => old.filter(p => p._id !== profId));
     } catch (err) {
       console.error("Approval failed", err);
+      alert(err.response?.data?.message || 'Error occurred during approval');
     }
   };
 
   const handleRejectProfessor = async (profId) => {
     try {
       await api.delete(`/professor/${profId}`);
-      setPendingProfessors(prev => prev.filter(p => p._id !== profId));
+      queryClient.setQueryData(['pendingProfessors'], (old) => old.filter(p => p._id !== profId));
     } catch (err) {
       console.error("Rejection failed", err);
+      alert(err.response?.data?.message || 'Error occurred during rejection');
     }
   };
 

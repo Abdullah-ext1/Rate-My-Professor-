@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import api from '../context/api';
 import { useParams } from 'react-router-dom';
 import { timeAgo } from '../utils/timeAgo';
+import toast from 'react-hot-toast';
 
 const PostScreen = ({ onNavClick, postData }) => {
   const { user } = useAuth();
@@ -51,6 +52,9 @@ const PostScreen = ({ onNavClick, postData }) => {
   const toggleLike = async () => {
     try {
       await api.patch(`/posts/${id}/like`);
+      if (!liked) {
+        toast.success('Post liked successfully!', { id: 'like-post', duration: 2000 });
+      }
       setLiked(!liked);
       setLikeCount(liked ? likeCount - 1 : likeCount + 1);
     } catch (error) {
@@ -73,8 +77,10 @@ const PostScreen = ({ onNavClick, postData }) => {
     try {
       if (replyingTo) {
         await api.post(`/comments/${replyingTo.id}/reply`, { content: commentText });
+        toast.success('Replied successfully!', { id: 'reply-post', duration: 2000 });
       } else {
         await api.post(`/comments/${id}`, { content: commentText });
+        toast.success('Comment added successfully!', { id: 'comment-post', duration: 2000 });
       }
       // refetch comments after posting
       const response = await api.get(`/comments/${id}`);

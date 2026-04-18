@@ -4,10 +4,21 @@ import { io } from 'socket.io-client';
 import api from '../context/api.js';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 const ChatScreen = ({ onNavClick }) => {
   const { user } = useAuth();
-  const [messages, setMessages] = useState([]);
+  
+  const queryClient = useQueryClient();
+  const { data: messages = [], isSuccess } = useQuery({
+    queryKey: ['chatMessages'],
+    queryFn: async () => {
+      const res = await api.get('/messages', { withCredentials: true });
+      return res.data.data.reverse();
+    },
+    staleTime: Infinity, // Prevent automatic refetches since sockets keep it updated
+  });
+
   const [onlineCount, setOnlineCount] = useState(0);
   const socketRef = useRef(null);
   const [input, setInput] = useState('');
@@ -86,19 +97,12 @@ const ChatScreen = ({ onNavClick }) => {
   };
 
   useEffect(() => {
-    const fetchMessages = async () => {
-      try {
-        const res = await api.get('/messages', { withCredentials: true })
-        setMessages(res.data.data.reverse())
-        
-        // Wait a tick for DOM to update, then scroll instanly (no animation)
-        setTimeout(() => scrollToBottom('auto'), 50);
-      } catch (error) {
-        console.error("Error fetching messages:", error)
-      }
+    if (isSuccess && hasEntered) {
+      setTimeout(() => scrollToBottom('auto'), 50);
     }
-    fetchMessages()
+  }, [isSuccess, hasEntered]);
 
+  useEffect(() => {
     // Only connect socket if token exists
     const token = localStorage.getItem('accessToken');
     if (!token) {
@@ -133,7 +137,7 @@ const ChatScreen = ({ onNavClick }) => {
     })
 
     socketRef.current.on('message', (newMessage) => {
-      setMessages(prev => [...prev, newMessage])
+      queryClient.setQueryData(['chatMessages'], (oldMessages = []) => [...oldMessages, newMessage]);
       if (hasEntered) {
         setTimeout(() => scrollToBottom('smooth'), 50);
       }
@@ -149,11 +153,6 @@ const ChatScreen = ({ onNavClick }) => {
     }
   }, [hasEntered])
 
-  useEffect(() => {
-    if (hasEntered) {
-      scrollToBottom('auto');
-    }
-  }, [hasEntered]);
 
   const handleSend = () => {
     if (input.trim()) {
@@ -165,19 +164,19 @@ const ChatScreen = ({ onNavClick }) => {
   const handleConfirmAction = () => {
     const { action, targetId } = confirmAction;
     if (action === 'delete') {
-      setMessages(messages.filter(m => m._id !== targetId));
+      queryClient.setQueryData(['chatMessages'], (old = []) => old.filter(m => m._id !== targetId));
     } else if (action === 'suspend') {
       alert('Suspended user for 15 days');
     } else if (action === 'ban') {
       alert('User permanently banned');
     } else if (action === 'mod') {
-      setMessages(prev => prev.map(m => 
+      queryClient.setQueryData(['chatMessages'], (old = []) => old.map(m => 
         m._id === targetId 
           ? {...m, senderDetails: {...(m.senderDetails || {}), role: 'moderator'}}
           : m
       ));
     } else if (action === 'remove_mod') {
-      setMessages(prev => prev.map(m => 
+      queryClient.setQueryData(['chatMessages'], (old = []) => old.map(m => 
         m._id === targetId 
           ? {...m, senderDetails: {...(m.senderDetails || {}), role: 'user'}}
           : m

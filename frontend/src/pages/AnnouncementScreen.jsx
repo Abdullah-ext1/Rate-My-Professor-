@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import ConfirmModal from "../components/ConfirmModal";
 import api from "../context/api.js";
 import { Link } from "react-router-dom";
 import { AnnouncementSkeleton } from "../components/Skeleton";
 import AnnouncementCard from "../components/AnnouncementCard";
 import { useAuth } from "../context/AuthContext.jsx";
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 const AnnouncementScreen = ({ onNavClick }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -13,28 +14,23 @@ const AnnouncementScreen = ({ onNavClick }) => {
   const [content, setContent] = useState("");
   const [type, setType] = useState("Important");
   const [activeTab, setActiveTab] = useState("all");
-  const [isLoading, setIsLoading] = useState(true);
+
   const { user } = useAuth()
+  const queryClient = useQueryClient()
 
   // Mock current user role for testing UI (can be 'user', 'moderator', or 'admin')
   const currentUserRole = user?.role;
   // id, title, content, author, date, type (Important/Event/General)
 
-  const [announcements, setAnnouncements] = useState([]);
 
-  useEffect(() => {
-    const fetchAnnoucement = async () => {
-      try {
-        const res = await api.get("/announcements/all")
-        setAnnouncements(res.data.data)
-      } catch (error) {
-        console.log("Error while getting the annoucements", error)
-      } finally {
-        setIsLoading(false)
-      }
+  const { data: announcements = [], isLoading } = useQuery({
+    queryKey: ['announcements'],
+    queryFn: async () => {
+      const res = await api.get('/announcements/all')
+      return res.data.data
     }
-    fetchAnnoucement();
-  }, []); // Remove activeTab dependency
+  })
+
 
   const filteredAnnouncements = announcements.filter((a) =>
     activeTab === "all" ? true : (a.announcementType || a.type) === activeTab
@@ -47,7 +43,7 @@ const AnnouncementScreen = ({ onNavClick }) => {
         content,
         announcementType: type
       })
-      setAnnouncements([res.data.data, ...announcements]); 
+      queryClient.invalidateQueries({ queryKey: ['announcements'] })
       setIsModalOpen(false)
       setTitle("")
       setContent("")
@@ -59,7 +55,7 @@ const AnnouncementScreen = ({ onNavClick }) => {
   const handleDelete = async () => {
     try {
       await api.delete(`/announcements/${deleteId}`)
-      setAnnouncements(announcements.filter(a => a._id !== deleteId))
+      queryClient.invalidateQueries({ queryKey: ['announcements'] })
     } catch (error) {
       console.log("Error while deleting the announcement", error)
     } finally {

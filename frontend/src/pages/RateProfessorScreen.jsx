@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useLocation } from "react-router-dom";
 import api from "../context/api.js";
+import { useQueryClient } from '@tanstack/react-query';
+import toast from 'react-hot-toast';
 
 const TopNav = ({ onNavClick }) => (
   <div className="fixed top-0 left-0 right-0 bg-bg px-4 py-2.5 flex items-center gap-3 flex-shrink-0 border-b border-border z-30">
@@ -47,6 +49,7 @@ const TagPicker = ({ tags, selectedTags, onToggle }) => (
 );
 
 const RateProfessorScreen = ({ onNavClick }) => {
+  const queryClient = useQueryClient();
   const [rating, setRating] = useState(0);
   const [difficulty, setDifficulty] = useState(3);
   const [selectedTags, setSelectedTags] = useState([]);
@@ -75,9 +78,12 @@ const RateProfessorScreen = ({ onNavClick }) => {
     setRating(val);
   };
 
+  const [errorMsg, setErrorMsg] = useState("");
+
   const handleSubmit = async () => {
     if (rating > 0 && review.trim().length > 0) {
       try {
+        setErrorMsg("");
         await api.post(
           `/ratings/${professor.id}`,
           {
@@ -86,9 +92,13 @@ const RateProfessorScreen = ({ onNavClick }) => {
             tags: selectedTags,
           },
         );
+        queryClient.invalidateQueries({ queryKey: ['professorReviews', professor.id] });
+        queryClient.invalidateQueries({ queryKey: ['professors'] });
+        toast.success("Professor rating submitted!", { id: 'rate-prof', duration: 2000 });
         onNavClick("professors");
       } catch (error) {
         console.error("Error submitting rating:", error);
+        setErrorMsg(error?.response?.data?.message || "Error submitting review");
       }
     }
   };
@@ -97,6 +107,11 @@ const RateProfessorScreen = ({ onNavClick }) => {
     <div className="flex flex-col h-full bg-bg">
       <TopNav onNavClick={onNavClick} />
       <div className="flex-1 overflow-y-auto px-4 pt-[60px] pb-24 scrollbar-hide text-text">
+        {errorMsg && (
+          <div className="mx-4 mt-6 bg-red-400/10 border border-red-400/20 text-red-400 text-xs font-semibold py-3 px-4 rounded-xl text-center">
+            {errorMsg}
+          </div>
+        )}
         <div className="text-center my-6">
           <div className="w-16 h-16 mx-auto rounded-full bg-opacity-20 bg-primary flex items-center justify-center text-2xl font-bold text-primary-mid font-syne mb-3">
             {professor?.initials || "AP"}

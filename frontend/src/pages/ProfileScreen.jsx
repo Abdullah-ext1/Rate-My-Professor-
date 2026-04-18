@@ -136,14 +136,20 @@ const EditProfileModal = ({ isOpen, onClose, user, onUpdate }) => {
 const ProfileScreen = ({ onNavClick, currentUserRole }) => {
   const {user, setUser} = useAuth();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  
+  // Try to use the globally captured deferred prompt first
+  const [deferredPrompt, setDeferredPrompt] = useState(window._deferredPrompt || null);
 
   useEffect(() => {
+    // If it hasn't fired yet, listen for it just in case
     const handleBeforeInstallPrompt = (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
+      window._deferredPrompt = e;
     };
+    
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
@@ -155,6 +161,7 @@ const ProfileScreen = ({ onNavClick, currentUserRole }) => {
       const { outcome } = await deferredPrompt.userChoice;
       if (outcome === 'accepted') {
         setDeferredPrompt(null);
+        window._deferredPrompt = null;
       }
     } else {
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
@@ -306,8 +313,8 @@ const ProfileScreen = ({ onNavClick, currentUserRole }) => {
               localStorage.removeItem('accessToken');
               window.location.href = '/login';
             }}
-
-            className="flex items-center gap-3 p-4 rounded-2xl hover:bg-red-500/10 transition-colors text-red-500 group cursor-pointer w-full text-left mt-2">
+            className="flex items-center gap-3 p-4 rounded-2xl hover:bg-red-500/10 transition-colors text-red-500 group cursor-pointer w-full text-left mt-2"
+          >
             <div className="w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center group-hover:bg-red-500/20 transition-colors">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
@@ -318,6 +325,34 @@ const ProfileScreen = ({ onNavClick, currentUserRole }) => {
             <span className="text-sm font-semibold flex-1">Log Out</span>
           </button>
         </div>
+
+        {/* Made with Love Section */}
+        <div className="my-8 flex flex-col items-center justify-center pt-6 border-t border-border/40">
+          <motion.div 
+            whileHover={{ scale: 1.05 }}
+            className="text-xs font-medium text-text3 tracking-wide flex items-center justify-center gap-1.5 bg-bg2 px-4 py-2 rounded-full border border-border/80 shadow-sm"
+          >
+            Made with <span className="text-red-500 animate-pulse text-sm px-0.5">❤</span> by{' '}
+            <a 
+              href="https://www.linkedin.com/in/ammarfrfr/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-primary-mid font-bold hover:underline"
+            >
+              Ammar
+            </a>
+            {' '}&{' '}
+            <a 
+              href="https://www.linkedin.com/in/abdullah-khan-6747252b5/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-primary-mid font-bold hover:underline"
+            >
+              Abdullah
+            </a>
+          </motion.div>
+        </div>
+
       </div>
     </div>
   );

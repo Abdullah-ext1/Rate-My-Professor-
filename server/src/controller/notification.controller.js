@@ -39,18 +39,61 @@ const markAsRead = asyncHandler(async (req, res) => {
 })
 
 const getAllNotifications = asyncHandler(async (req, res) => {
-  const allNotification = await Notification.find({userId :req.user.id}).populate('userId', 'name username').populate('senderId', 'name username').sort({createdAt: -1})
+  const isPaginatedRequest = req.query.page !== undefined || req.query.limit !== undefined
+  const page = Math.max(Number(req.query.page) || 1, 1)
+  const limit = Math.max(Number(req.query.limit) || 10, 1)
+  const skip = (page - 1) * limit
+
+  const filter = { userId: req.user.id }
+  const total = await Notification.countDocuments(filter)
+
+  const allNotification = await Notification.find(filter)
+    .populate('userId', 'name username')
+    .populate('senderId', 'name username')
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit)
+
+  const hasMore = skip + allNotification.length < total
+
+  if (!isPaginatedRequest) {
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(200, allNotification, "All Notification's fetched successfully")
+      )
+  }
 
   return res
-  .status(201)
+  .status(200)
   .json(
-    new ApiResponse(201, allNotification, "All Notification's fetched successfully")
+    new ApiResponse(200, {
+      items: allNotification,
+      pagination: {
+        page,
+        limit,
+        total,
+        hasMore,
+        nextPage: hasMore ? page + 1 : null
+      }
+    }, "All Notification's fetched successfully")
   )
 })
 
+const getUnreadCount = asyncHandler(async(req, res) => {
+  const unreadCount = await Notification.countDocuments({
+    recipient: req.user._id,
+    isRead: false
+  })
+
+  return res.status(200).json(
+    new ApiResponse(200, unreadCount, "Unread count fetched successfully")
+  )
+})
 
 export {
   createNotification,
   markAsRead,
   getAllNotifications,
+  getUnreadCount
 }

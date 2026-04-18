@@ -1,0 +1,52 @@
+{
+  "name": "Campus",
+  "short_name": "Campus",
+  "description": "Rate your professors and track attendance easily.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#0E0D14",
+  "background_color": "#0E0D14",
+  "icons": [
+    {
+      "src": "/campus_logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/campus_logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/campus_logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/campus_logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Campus",
+      "short_name": "Campus",
+      "description": "Rate your professors",
+      "url": "/professors",
+      "icons": [
+        {
+          "src": "/campus_logo.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
+    }
+  ]
+}

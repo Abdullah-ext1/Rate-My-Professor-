@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { PYQSkeleton } from "../components/Skeleton";
 import { useAuth } from "../context/AuthContext";
 import api from "../context/api.js";
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import toast from 'react-hot-toast';
 
 const TopNav = ({ onNavClick }) => {
   const { user } = useAuth();
@@ -157,10 +159,11 @@ const UploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
         setSubjectName('')
         setYear('')
         setFileUrl('')
+        toast.success(`${type} submitted! Pending review.`, { id: 'submit-pyq', duration: 2500 });
         onClose()
       }
     } catch (err) {
-      setError('Network error. Please try again.');
+      setError(err?.response?.data?.message || 'Network error. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -281,24 +284,17 @@ const PYQsScreen = ({ onNavClick }) => {
   const [activeFilter, setActiveFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [items, setItems] = useState([]);
+  const queryClient = useQueryClient();
 
-  const fetchItems = async () => {
-    setIsLoading(true);
-    try {
+  const { data: items = [], isLoading, isError, error } = useQuery({
+    queryKey: ['pyqs'], 
+    queryFn: async () => {
       const res = await api.get('/pyqs');
-      setItems(res.data.data)
-    } catch (err) {
-      console.error('Failed to fetch items:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchItems();
-  }, []);
+      return res.data.data;
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    // this helps to avoid refetching data every time we come back to this screen within 5 minutes, providing a smoother UX
+  });
 
   // Filter based on active tab, filter type and search query
   const filteredItems = items.filter(item => {
@@ -373,7 +369,7 @@ const PYQsScreen = ({ onNavClick }) => {
       <UploadModal 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)}
-        onUploadSuccess={fetchItems}
+        onUploadSuccess={() => queryClient.invalidateQueries({ queryKey: ['pyqs'] })}
       />
     </div>
   );

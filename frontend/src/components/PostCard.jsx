@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import api from "../context/api.js";
 import { timeAgo } from '../utils/timeAgo';
 import AttendanceFlexCard from './AttendanceFlexCard';
+import toast from 'react-hot-toast';
 
 const PostCard = ({ id, handle, handleId, isLiked = false, likes, comments, onClick, onDelete, title, content, time, category, }) => {
   const { user } = useAuth();
@@ -45,6 +46,9 @@ const PostCard = ({ id, handle, handleId, isLiked = false, likes, comments, onCl
     e.stopPropagation();
     try {
       await api.patch(`/posts/${id}/like`);
+      if (!liked) {
+        toast.success('Post liked successfully!', { id: 'like-post', duration: 2000 });
+      }
       setLiked(!liked);
       setLikeCount(liked ? likeCount - 1 : likeCount + 1);
     } catch (error) {

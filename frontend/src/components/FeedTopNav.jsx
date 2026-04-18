@@ -1,7 +1,19 @@
 import { useAuth } from '../context/AuthContext';
+import { useQuery } from '@tanstack/react-query';
+import api from '../context/api';
 
 const FeedTopNav = ({ onNavClick }) => {
   const { user } = useAuth();
+
+  const { data: unreadCount = 0 } = useQuery({
+    queryKey: ['notifications', 'unread'],
+    queryFn: async () => {
+      const res = await api.get('/notifications/unread', { withCredentials: true });
+      return res.data.data;
+    },
+    staleTime: 60 * 1000, // 1 min (optional, since it's lightweight we can fetch often)
+    refetchInterval: 30 * 1000 // auto poll every 30s so the dot appears transparently behind the scenes
+  });
   
   return (
   <div className="fixed top-0 left-0 right-0 bg-bg px-4 py-2.5 flex items-center justify-between flex-shrink-0 border-b border-border z-30">
@@ -34,7 +46,9 @@ const FeedTopNav = ({ onNavClick }) => {
           <path d="M8 1a5 5 0 015 5v3l1.5 2H1.5L3 9V6a5 5 0 015-5z" />
           <path d="M6.5 13a1.5 1.5 0 003 0" />
         </svg>
-        <div className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-accent-red border border-bg"></div>
+        {unreadCount > 0 && (
+          <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-accent-red border-2 border-bg"></div>
+        )}
       </div>
     </div>
   </div>
