@@ -11,10 +11,8 @@ const getLeaderboard = asyncHandler(async (req, res) => {
         matchFilter["professorDetails.college"] = new mongoose.Types.ObjectId(filter.college);
     }
     
-    // Also only include approved professors
-    if (req.user.role !== 'admin') {
-        matchFilter["professorDetails.isApproved"] = true;
-    }
+    // Remove the approval filter so that all users can see all professors
+    // since regular users can see unapproved professors on the Feed as well.
 
     const leaderboard = await Rating.aggregate([
         {
