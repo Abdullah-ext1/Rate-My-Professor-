@@ -136,18 +136,32 @@ const EditProfileModal = ({ isOpen, onClose, user, onUpdate }) => {
 const ProfileScreen = ({ onNavClick, currentUserRole }) => {
   const {user, setUser} = useAuth();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  
+  // Try to use the globally captured deferred prompt first
+  const [deferredPrompt, setDeferredPrompt] = useState(window._deferredPrompt || null);
 
   useEffect(() => {
+    // If it hasn't fired yet, listen for it just in case
     const handleBeforeInstallPrompt = (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
+      window._deferredPrompt = e;
     };
+    
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    
+    // Poll for the global prompt in case it was set slightly after mount
+    const checkInterval = setInterval(() => {
+      if (window._deferredPrompt && !deferredPrompt) {
+        setDeferredPrompt(window._deferredPrompt);
+      }
+    }, 1000);
+
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      clearInterval(checkInterval);
     };
-  }, []);
+  }, [deferredPrompt]);
 
   const handleInstallClick = async () => {
     if (deferredPrompt) {

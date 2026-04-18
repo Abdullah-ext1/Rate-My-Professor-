@@ -51,6 +51,7 @@ const AppLayout = () => {
     const handleBeforeInstallPrompt = (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
+      window._deferredPrompt = e; // Make accessible globally for ProfileScreen
 
       const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
 
