@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
 import { NotificationSkeleton } from '../components/Skeleton';
 import api from '../context/api.js';
 import { timeAgo } from '../utils/timeAgo';
+import { useQuery } from '@tanstack/react-query';
 
 const TopNav = ({ onNavClick }) => (
   <div className="fixed top-0 left-0 right-0 bg-bg px-4 py-2.5 flex items-center gap-3 flex-shrink-0 border-b border-border z-30">
@@ -86,27 +86,35 @@ const NotificationItem = ({ type, userId, senderId, content, createdAt, isRead, 
 };
 
 const NotificationScreen = ({ onNavClick }) => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [notifications, setNotifications] = useState([]);
+  // const [isLoading, setIsLoading] = useState(true);
+  // const [notifications, setNotifications] = useState([]);
 
-  useEffect(() => {
-    setIsLoading(true);
-    const fetchNotifications = async () => {
-      try {
-        const notification = await api.get("/notifications/", { withCredentials: true })
-        console.log(notification.data.data);
+  // useEffect(() => {
+  //   setIsLoading(true);
+  //   const fetchNotifications = async () => {
+  //     try {
+  //       const notification = await api.get("/notifications/", { withCredentials: true })
+  //       console.log(notification.data.data);
 
-        setNotifications(notification.data.data);
+  //       setNotifications(notification.data.data);
 
-        setIsLoading(false);
-      } catch (error) {
-        console.error("Error fetching notifications:", error);
-      } finally {
-        setIsLoading(false);
-      }
+  //       setIsLoading(false);
+  //     } catch (error) {
+  //       console.error("Error fetching notifications:", error);
+  //     } finally {
+  //       setIsLoading(false);
+  //     }
+  //   }
+  //   fetchNotifications();
+  // }, []);
+
+  const { data: notificationsData = [], isError, isLoading } = useQuery({
+    queryKey: ['notifications'],
+    queryFn: async () => {
+      const res = await api.get("/notifications/", { withCredentials: true });
+      return res.data.data;
     }
-    fetchNotifications();
-  }, []);
+  });
 
   return (
     <div className="flex flex-col h-full bg-bg">
@@ -121,8 +129,12 @@ const NotificationScreen = ({ onNavClick }) => {
               <NotificationSkeleton />
               <NotificationSkeleton />
             </>
+          ) : isError ? (
+            <div className="text-center text-red-500 text-sm py-10">
+              Something went wrong. Please try again.
+            </div>
           ) : (
-            notifications.map(notif => (
+            notificationsData.map(notif => (
               <NotificationItem key={notif._id} {...notif} onNavClick={onNavClick} />
             ))
           )}

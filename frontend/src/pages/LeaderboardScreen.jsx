@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { LeaderboardItemSkeleton } from '../components/Skeleton';
 import api from '../context/api.js';
 
+import { useQuery } from '@tanstack/react-query';
+
 const TopNav = ({ onNavClick }) => (
   <div className="fixed top-0 left-0 right-0 bg-bg px-4 py-2.5 flex items-center gap-3 flex-shrink-0 border-b border-border z-30">
     <button onClick={() => onNavClick('feed')} className="w-8 h-8 rounded-full bg-bg2 flex items-center justify-center cursor-pointer hover:bg-bg3 transition-colors">
@@ -43,15 +45,11 @@ const LeaderboardItem = ({ rank, initials, name, subject, rating, reviews, onRat
 };
 
 const LeaderboardScreen = ({ onNavClick }) => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [professors, setProfessors] = useState([]);
-
-useEffect(() => {
-  const fetchLeaderboard = async () => {
-    setIsLoading(true)
-    try {
+  const { data: professors = [], isLoading, isError, error } = useQuery({
+    queryKey: ['leaderboard'],
+    queryFn: async () => {
       const res = await api.get("/leaderboard", { withCredentials: true })
-      const mapped = res.data.data.map(item => ({
+      return res.data.data.map(item => ({
         id: item._id,
         name: item.professorDetails[0]?.name || 'Unknown',
         initials: (item.professorDetails[0]?.name || 'UN').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase(),
@@ -59,15 +57,9 @@ useEffect(() => {
         rating: item.averageRating.toFixed(1),
         reviews: item.totalRatings
       }))
-      setProfessors(mapped)
-    } catch (error) {
-      console.error("Error fetching leaderboard:", error)
-    } finally {
-      setIsLoading(false)
-    }
-  }
-  fetchLeaderboard()
-}, []);
+    },
+    staleTime: 5 * 60 * 1000
+  });;
 
   return (
     <div className="flex flex-col h-full bg-bg">

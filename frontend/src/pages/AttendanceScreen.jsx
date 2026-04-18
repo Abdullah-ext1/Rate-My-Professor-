@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import api from '../context/api';
 import AttendanceFlexCard from '../components/AttendanceFlexCard';
+import { useQuery } from '@tanstack/react-query'
 
 const ShareModal = ({ isOpen, onClose, onShare, subjects }) => {
   if (!isOpen) return null;
@@ -66,36 +67,37 @@ const ShareModal = ({ isOpen, onClose, onShare, subjects }) => {
 
 const AttendanceScreen = ({ onNavClick }) => {
   const [subjects, setSubjects] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [animateIn, setAnimateIn] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
+
 
   const showToast = (msg) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(""), 3000);
   };
 
+  const { data: rawSubjects = [], isLoading } = useQuery({
+    queryKey: ['attendance'],
+    queryFn: async () => {
+      const res = await api.get('/attendance')
+      return (res.data.data || []).map(att => ({
+        ...att,
+        name: att.subject,
+        present: att.classAttended,
+        total: att.totalClasses
+      }))
+    }
+  })
+
   useEffect(() => {
-    const fetchAttendance = async () => {
-      try {
-        const response = await api.get('/attendance');
-        const mapped = (response.data.data || []).map(att => ({
-          ...att,
-          name: att.subject,
-          present: att.classAttended,
-          total: att.totalClasses
-        }));
-        setSubjects(mapped);
-      } catch (err) {
-        console.error("Error fetching attendance:", err);
-      } finally {
-        setIsLoading(false);
-        setTimeout(() => setAnimateIn(true), 100);
-      }
-    };
-    fetchAttendance();
-  }, []);
+    if (!isLoading) setTimeout(() => setAnimateIn(true), 100)
+  }, [isLoading])
+
+  useEffect(() => {
+    if (rawSubjects.length > 0) setSubjects(rawSubjects)
+  }, [rawSubjects])
+
 
   const overall = subjects.length > 0
     ? Math.round(subjects.reduce((acc, s) => acc + ((s.present || 0) / (s.total || 1)) * 100, 0) / subjects.length)

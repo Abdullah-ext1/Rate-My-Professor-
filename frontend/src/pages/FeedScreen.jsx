@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import ConfirmModal from '../components/ConfirmModal';
 import { PostCardSkeleton } from '../components/Skeleton';
 import HorizontalTabs from '../components/HorizontalTabs';
@@ -7,6 +7,7 @@ import PostCard from '../components/PostCard';
 import FeedTopNav from '../components/FeedTopNav';
 import AttendanceMini from '../components/AttendanceMini';
 import { useAuth } from '../context/AuthContext';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import api from '../context/api';
 
@@ -19,26 +20,35 @@ const ScrollArea = ({ children }) => (
 const FeedScreen = ({ onNavClick }) => {
   const [activeHTab, setActiveHTab] = useState('All');
   const [postToDelete, setPostToDelete] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
-  const [posts, setPosts] = useState([]);
 
-  useEffect(() => {
-    // Simulate fetching posts from a backend
-    const fetchPosts = async () => {
-      try {
-        setIsLoading(true)
-        const response = await api.get("/posts")
-        setPosts(response.data.data)
-      } catch (error) {
-        console.log("Error fetching posts", error)
-      } finally {
-        setIsLoading(false)
-      }
-    };
+  const queryClient = useQueryClient();
 
-    fetchPosts();
-  }, []);
+  // useEffect(() => {
+  //   // Simulate fetching posts from a backend
+  //   const fetchPosts = async () => {
+  //     try {
+  //       setIsLoading(true)
+  //       const response = await api.get("/posts")
+  //       setPosts(response.data.data)
+  //     } catch (error) {
+  //       console.log("Error fetching posts", error)
+  //     } finally {
+  //       setIsLoading(false)
+  //     }
+  //   };
+
+  //   fetchPosts();
+  // }, []);
+
+  const {data: posts = [], isError, isLoading} = useQuery({
+    queryKey: ['posts'],
+    queryFn: async () => {
+      const res = await api.get('/posts', { withCredentials: true });
+      return res.data.data;
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
 
   const handleCreatePost = async (newTitle, newContent, newCategory) => {
     try {
@@ -47,7 +57,8 @@ const FeedScreen = ({ onNavClick }) => {
         content: newContent,
         tags: newCategory
       });
-      setPosts([response.data.data, ...posts]);
+      // setPospts([response.data.data, ...posts]);
+      queryClient.setQueryData(['posts'], oldPosts => [response.data.data, ...oldPosts]);
     } catch (error) {
         console.log("Error while creating the post", error);
     }};
@@ -90,6 +101,11 @@ const FeedScreen = ({ onNavClick }) => {
             <PostCardSkeleton />
             <PostCardSkeleton />
           </>
+          ) : isError ? (
+            <div className="text-center text-red-500 text-sm py-10">
+              Something went wrong. Please try again.
+            </div>
+
 
         ) : filteredPosts.length > 0 ? (
           filteredPosts.map(post => (
@@ -121,7 +137,8 @@ const FeedScreen = ({ onNavClick }) => {
         onConfirm={async () => {
           try {
             await api.delete(`/posts/${postToDelete}`);
-            setPosts(posts.filter(post => post._id !== postToDelete));
+            // setPosts(posts.filter(post => post._id !== postToDelete));
+            queryClient.setQueryData(['posts'], oldPosts => oldPosts.filter(post => post._id !== postToDelete));
           } catch (error) {
             console.log("Error deleting post", error);
           } finally {

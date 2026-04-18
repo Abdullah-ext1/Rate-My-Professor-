@@ -1,38 +1,32 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import api from '../context/api.js';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 const ProfessorReviewsScreen = ({ professor, onBack, currentUserRole, onDelete }) => {
- const [reviews, setReviews] = useState([]);
-const [isLoading, setIsLoading] = useState(true);
+const queryClient = useQueryClient();
 
-useEffect(() => {
-  const fetchRatings = async () => {
-    try {
-      const res = await api.get(`/ratings/${professor.id}`, { withCredentials: true })
-      const mapped = res.data.data.ratings.map(r => ({
-        id: r._id,
-        rating: r.rating,
-        title: 'Review',
-        content: r.comment,
-        date: new Date(r.createdAt).toLocaleDateString(),
-        helpful: 0,
-        unhelpful: 0,
-        userVote: null
-      }))
-      setReviews(mapped)
-    } catch (error) {
-      console.error("Error fetching ratings:", error)
-    } finally {
-      setIsLoading(false)
-    }
-  }
-  fetchRatings()
-}, [professor.id])
+const { data: reviews = [], isLoading, isError, error } = useQuery({
+  queryKey: ['professorReviews', professor.id],
+  queryFn: async () => {
+    const res = await api.get(`/ratings/${professor.id}`, { withCredentials: true })
+    return res.data.data.ratings.map(r => ({
+      id: r._id,
+      rating: r.rating,
+      title: 'Review',
+      content: r.comment,
+      date: new Date(r.createdAt).toLocaleDateString(),
+      helpful: 0,
+      unhelpful: 0,
+      userVote: null
+    }));
+  },
+  staleTime: 5 * 60 * 1000 // 5 minutes
+});
 
   const [filterRating, setFilterRating] = useState(null);
 
   const handleVote = (id, type) => {
-    setReviews(prev => prev.map(r => {
+    queryClient.setQueryData(['professorReviews', professor.id], (old = []) => old.map(r => {
       if (r.id === id) {
         if (r.userVote === type) {
           // undo vote
