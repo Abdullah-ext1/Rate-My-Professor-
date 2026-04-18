@@ -1,5 +1,6 @@
 {
-  "rewrites": [
-    { "source": "/(?!manifest|sw|registerSW|assets|icon|campus_logo)", "destination": "/index.html" }
+  "routes": [
+    { "handle": "filesystem" },
+    { "src": "/.*", "dest": "/index.html" }
   ]
 }
