@@ -1,17 +1,22 @@
+import mongoose from "mongoose";
+
 const getCollegeFilter = (user) => {
-  // Admins can see professors from all colleges
-  if (user.role === 'admin') {
+  // If user has a college assigned, strictly filter by that college
+  if (user.college) {
+    const collegeId = user.college instanceof mongoose.Types.ObjectId
+      ? user.college
+      : new mongoose.Types.ObjectId(user.college);
+    return { college: collegeId };
+  }
+
+  // Admins without a specific college can see everything
+  if (user.role === 'admin' && !user.college) {
     return {};
   }
-  
-  // If user has a college assigned, filter by that college
-  if (user.college) {
-    return { college: user.college };
-  }
-  
-  // If user doesn't have a college yet (during onboarding), return empty filter
-  // This allows them to see all professors or no professors based on other criteria
-  return {};
+
+  // If a regular user or moderator doesn't have a college somehow, 
+  // return a condition that matches NO professors to prevent seeing cross-college profs
+  return { college: null };
 }
 
 export { getCollegeFilter };

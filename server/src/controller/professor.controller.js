@@ -46,9 +46,15 @@ const getProfessor = asyncHandler(async (req, res) => {
     const skip = (page - 1) * limit
 
     const filter = getCollegeFilter(req.user)
+    
+    // DEBUG: Log the filter to verify college filtering is applied
+    console.log("User role:", req.user.role, "User college:", req.user.college, "Filter:", filter);
+    
+    // Regular users should ALWAYS see only their college's professors
     if (req.user.role !== 'admin' && req.user.role !== 'moderator') {
         // Regular users can see all professors (no approval filter)
         // They just see a filtered view based on their college
+        // Filter is already set by getCollegeFilter
     } else {
         if (req.query.isApproved !== undefined) {
             if (req.query.isApproved === 'false') {

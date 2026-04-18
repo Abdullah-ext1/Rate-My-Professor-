@@ -401,11 +401,18 @@ const ProfessorsScreen = ({ onNavClick }) => {
   });
 
   const handleAddAttendance = async () => {
-    if (newAttendance.professorId && newAttendance.subject) {
+    let subjectToUse = newAttendance.subject;
+    
+    // If user selected "Other", use the custom subject input
+    if (newAttendance.subject === "__other__") {
+      subjectToUse = newAttendance.customSubject;
+    }
+    
+    if (newAttendance.professorId && subjectToUse && subjectToUse.trim()) {
       try {
         const res = await api.post("/attendance", {
           professor: newAttendance.professorId,
-          subject: newAttendance.subject,
+          subject: subjectToUse,
         });
         const att = res.data.data;
         const newRecord = {
@@ -420,7 +427,7 @@ const ProfessorsScreen = ({ onNavClick }) => {
         };
         setAttendances([...attendances, newRecord]);
         setShowAddAttendanceModal(false);
-        setNewAttendance({ professorId: "", subject: "" });
+        setNewAttendance({ professorId: "", subject: "", customSubject: "" });
       } catch (error) {
         console.error("Error adding attendance subject", error);
       }
@@ -839,25 +846,38 @@ const ProfessorsScreen = ({ onNavClick }) => {
                 ))}
               </select>
               {newAttendance.professorId ? (
-                <select
-                  value={newAttendance.subject}
-                  onChange={(e) =>
-                    setNewAttendance({ ...newAttendance, subject: e.target.value })
-                  }
-                  className="bg-bg2 border border-border rounded-xl px-3 py-2 text-sm text-text outline-none focus:border-primary transition-colors cursor-pointer"
-                  style={{ colorScheme: "dark" }}
-                >
-                  <option value="" disabled className="text-text3">
-                    Select Subject
-                  </option>
-                  {professors
-                    .find((p) => p.id === newAttendance.professorId)
-                    ?.subjectsArray?.map((sub, idx) => (
-                      <option key={idx} value={sub}>
-                        {sub}
-                      </option>
-                    ))}
-                </select>
+                <>
+                  <select
+                    value={newAttendance.subject}
+                    onChange={(e) =>
+                      setNewAttendance({ ...newAttendance, subject: e.target.value })
+                    }
+                    className="bg-bg2 border border-border rounded-xl px-3 py-2 text-sm text-text outline-none focus:border-primary transition-colors cursor-pointer"
+                    style={{ colorScheme: "dark" }}
+                  >
+                    <option value="" disabled className="text-text3">
+                      Select Subject
+                    </option>
+                    {professors
+                      .find((p) => p.id === newAttendance.professorId)
+                      ?.subjectsArray?.map((sub, idx) => (
+                        <option key={idx} value={sub}>
+                          {sub}
+                        </option>
+                      ))}
+                    <option value="__other__">Other (Enter manually)</option>
+                  </select>
+                  {newAttendance.subject === "__other__" && (
+                    <input
+                      value={newAttendance.customSubject || ""}
+                      onChange={(e) =>
+                        setNewAttendance({ ...newAttendance, customSubject: e.target.value })
+                      }
+                      placeholder="Enter subject name"
+                      className="bg-bg2 border border-border rounded-xl px-3 py-2 text-sm text-text outline-none focus:border-primary transition-colors"
+                    />
+                  )}
+                </>
               ) : (
                 <input
                   value={newAttendance.subject}
@@ -879,7 +899,7 @@ const ProfessorsScreen = ({ onNavClick }) => {
               </button>
               <button
                 onClick={handleAddAttendance}
-                disabled={!newAttendance.professorId || !newAttendance.subject}
+                disabled={!newAttendance.professorId || !newAttendance.subject || (newAttendance.subject === "__other__" && !newAttendance.customSubject?.trim())}
                 className="flex-1 py-2 rounded-xl bg-primary text-white font-medium hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Start Tracking
