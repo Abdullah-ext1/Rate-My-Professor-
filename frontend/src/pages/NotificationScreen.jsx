@@ -1,7 +1,11 @@
+import { useCallback, useMemo, useRef } from 'react';
 import { NotificationSkeleton } from '../components/Skeleton';
 import api from '../context/api.js';
 import { timeAgo } from '../utils/timeAgo';
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
+import { useInfiniteScrollTrigger } from '../utils/useInfiniteScrollTrigger';
+
+const PAGE_SIZE = 10;
 
 const TopNav = ({ onNavClick }) => (
   <div className="fixed top-0 left-0 right-0 bg-bg px-4 py-2.5 flex items-center gap-3 flex-shrink-0 border-b border-border z-30">
@@ -14,7 +18,7 @@ const TopNav = ({ onNavClick }) => (
   </div>
 );
 
-const NotificationItem = ({ type, userId, senderId, content, createdAt, isRead, postId, onNavClick }) => {
+const NotificationItem = ({ type, senderId, content, createdAt, isRead, postId, onNavClick }) => {
   const getIcon = () => {
     if (type === 'like') {
       return (
@@ -86,34 +90,47 @@ const NotificationItem = ({ type, userId, senderId, content, createdAt, isRead, 
 };
 
 const NotificationScreen = ({ onNavClick }) => {
-  // const [isLoading, setIsLoading] = useState(true);
-  // const [notifications, setNotifications] = useState([]);
+  const loadMoreRef = useRef(null);
 
-  // useEffect(() => {
-  //   setIsLoading(true);
-  //   const fetchNotifications = async () => {
-  //     try {
-  //       const notification = await api.get("/notifications/", { withCredentials: true })
-  //       console.log(notification.data.data);
-
-  //       setNotifications(notification.data.data);
-
-  //       setIsLoading(false);
-  //     } catch (error) {
-  //       console.error("Error fetching notifications:", error);
-  //     } finally {
-  //       setIsLoading(false);
-  //     }
-  //   }
-  //   fetchNotifications();
-  // }, []);
-
-  const { data: notificationsData = [], isError, isLoading } = useQuery({
-    queryKey: ['notifications'],
-    queryFn: async () => {
-      const res = await api.get("/notifications/", { withCredentials: true });
+  const {
+    data,
+    isError,
+    isLoading,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage
+  } = useInfiniteQuery({
+    queryKey: ['notifications', PAGE_SIZE],
+    queryFn: async ({ pageParam = 1 }) => {
+      const res = await api.get('/notifications/', {
+        withCredentials: true,
+        params: {
+          page: pageParam,
+          limit: PAGE_SIZE
+        }
+      });
       return res.data.data;
+    },
+    getNextPageParam: (lastPage) => lastPage?.pagination?.hasMore ? lastPage.pagination.nextPage : undefined,
+    initialPageParam: 1
+  });
+
+  const notificationsData = useMemo(
+    () => data?.pages?.flatMap((page) => page?.items || []) || [],
+    [data]
+  );
+
+  const handleLoadMore = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
     }
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
+
+  useInfiniteScrollTrigger({
+    targetRef: loadMoreRef,
+    enabled: hasNextPage && !isLoading,
+    onLoadMore: handleLoadMore,
+    rootMargin: '300px'
   });
 
   return (
@@ -134,11 +151,22 @@ const NotificationScreen = ({ onNavClick }) => {
               Something went wrong. Please try again.
             </div>
           ) : (
-            notificationsData.map(notif => (
-              <NotificationItem key={notif._id} {...notif} onNavClick={onNavClick} />
-            ))
+            <>
+              {notificationsData.map(notif => (
+                <NotificationItem key={notif._id} {...notif} onNavClick={onNavClick} />
+              ))}
+
+              <div ref={loadMoreRef} className="h-2" />
+
+              {isFetchingNextPage && (
+                <>
+                  <NotificationSkeleton />
+                  <NotificationSkeleton />
+                </>
+              )}
+            </>
           )}
-          {!isLoading && (
+          {!isLoading && !hasNextPage && (
             <div className="text-center text-xs text-text3 py-6">
               No more notifications
             </div>

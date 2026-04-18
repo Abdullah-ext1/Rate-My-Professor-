@@ -36,24 +36,38 @@ const createPost = asyncHandler( async(req, res) => {
 })
 
 const getPosts = asyncHandler(async( req, res ) => {
-  const page = Number(req.query.page) || 1    // default to page 1 if not provided
-  const limit = Number(req.query.limit) || 10 // default to 10 posts per page if not provided
-  const skip = (page - 1) * limit // calculate the number of posts to skip based on the current page and limit
+  const page = Math.max(Number(req.query.page) || 1, 1)
+  const limit = Math.max(Number(req.query.limit) || 10, 1)
+  const skip = (page - 1) * limit
 
-  // if else between admin and user
-  const filter ={
-    isAnnouncement: false, 
-    ...req.user.role === 'admin' ? {} : { college: req.user.college }}
+  const filter = {
+    isAnnouncement: false,
+    ...(req.user.role === 'admin' ? {} : { college: req.user.college })
+  }
+
+  const total = await Post.countDocuments(filter)
+
   const posts = await Post.find(filter)
     .populate('owner', 'name')
-    .sort({ createdAt: -1 }) // Makes sure newest posts appear first
+    .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit)
+
+  const hasMore = skip + posts.length < total
 
   return res
   .status(200)
   .json(
-    new ApiResponse("200", posts, "Posts fetched successfully")
+    new ApiResponse(200, {
+      items: posts,
+      pagination: {
+        page,
+        limit,
+        total,
+        hasMore,
+        nextPage: hasMore ? page + 1 : null
+      }
+    }, "Posts fetched successfully")
   )
 })
 
