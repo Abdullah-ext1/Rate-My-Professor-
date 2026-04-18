@@ -21,10 +21,19 @@ import {ProtectedRoute} from "./context/ProtectedRoute"
 import { useAuth } from './context/AuthContext';
 
 
+const LoadingScreen = () => (
+  <div className="flex flex-col flex-1 bg-bg h-screen w-full items-center justify-center">
+    <div className="flex flex-col items-center gap-4">
+      <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+      <p className="text-text2 font-syne animate-pulse text-sm">Waking up the server...</p>
+    </div>
+  </div>
+);
+
 const RootRedirect = () => {
     const { user, loading } = useAuth();
     
-    if (loading) return null; // or a spinner
+    if (loading) return <LoadingScreen />;
     if (!user) return <Navigate to="/login" />;
     if (!user.college && user.role !== 'admin') return <Navigate to="/onboarding" />;
     return <Navigate to="/feed" />;
