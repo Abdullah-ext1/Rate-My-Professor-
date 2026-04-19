@@ -10,28 +10,29 @@
   "background_color": "#0E0D14",
   "icons": [
     {
-      "src": "/campus_logo.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/campus_logo.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/campus_logo.svg",
-      "sizes": "any",
-      "type": "image/svg+xml"
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
     }
   ],
   "screenshots": [
     {
-      "src": "/campus_logo.svg",
-      "sizes": "any",
-      "type": "image/svg+xml"
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "wide"
     }
   ],
   "shortcuts": [
@@ -42,9 +43,9 @@
       "url": "/professors",
       "icons": [
         {
-          "src": "/campus_logo.svg",
-          "sizes": "any",
-          "type": "image/svg+xml"
+          "src": "/logo.png",
+          "sizes": "192x192",
+          "type": "image/png"
         }
       ]
     }
