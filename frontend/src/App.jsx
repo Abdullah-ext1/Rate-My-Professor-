@@ -23,6 +23,7 @@ const ModeratorDashboard = lazy(() => import('./pages/ModeratorDashboard'));
 const AttendanceScreen = lazy(() => import('./pages/AttendanceScreen'));
 
 
+
 const LoadingScreen = () => (
   <div className="flex flex-col flex-1 bg-bg h-screen w-full items-center justify-center">
     <div className="w-full h-full" />
