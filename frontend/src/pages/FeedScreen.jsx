@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ConfirmModal from '../components/ConfirmModal';
 import { PostCardSkeleton } from '../components/Skeleton';
 import HorizontalTabs from '../components/HorizontalTabs';
@@ -7,7 +7,7 @@ import PostCard from '../components/PostCard';
 import FeedTopNav from '../components/FeedTopNav';
 import AttendanceMini from '../components/AttendanceMini';
 import { useAuth } from '../context/AuthContext';
-import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useInfiniteScrollTrigger } from '../utils/useInfiniteScrollTrigger';
 
 import api from '../context/api';
@@ -22,6 +22,7 @@ const ScrollArea = ({ children }) => (
 
 const FeedScreen = ({ onNavClick }) => {
   const [activeHTab, setActiveHTab] = useState('All');
+  const [sortMode, setSortMode] = useState('hot');
   const [postToDelete, setPostToDelete] = useState(null);
   const { user } = useAuth();
   const loadMoreRef = useRef(null);
@@ -36,13 +37,14 @@ const FeedScreen = ({ onNavClick }) => {
     fetchNextPage,
     isFetchingNextPage
   } = useInfiniteQuery({
-    queryKey: ['posts', PAGE_SIZE],
+    queryKey: ['posts', PAGE_SIZE, sortMode],
     queryFn: async ({ pageParam = 1 }) => {
       const res = await api.get('/posts', {
         withCredentials: true,
         params: {
           page: pageParam,
-          limit: PAGE_SIZE
+          limit: PAGE_SIZE,
+          sort: sortMode
         }
       });
       return res.data.data;
@@ -50,12 +52,64 @@ const FeedScreen = ({ onNavClick }) => {
     getNextPageParam: (lastPage) => lastPage?.pagination?.hasMore ? lastPage.pagination.nextPage : undefined,
     initialPageParam: 1,
     staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  const { data: latestPosts = [] } = useQuery({
+    queryKey: ['posts-latest-batch', sortMode],
+    queryFn: async () => {
+      const res = await api.get('/posts', {
+        withCredentials: true,
+        params: {
+          page: 1,
+          limit: 5,
+          sort: sortMode
+        }
+      });
+      return res.data?.data?.items || [];
+    },
+    refetchInterval: 30000,
+    staleTime: 15000,
+    refetchOnWindowFocus: false
   });
 
   const posts = useMemo(
     () => data?.pages?.flatMap((page) => page?.items || []) || [],
     [data]
   );
+
+  useEffect(() => {
+    if (!latestPosts?.length) return;
+
+    queryClient.setQueryData(['posts', PAGE_SIZE, sortMode], (oldData) => {
+      if (!oldData?.pages?.length) return oldData;
+
+      const existingIds = new Set(
+        oldData.pages.flatMap((page) => (page?.items || []).map((post) => post?._id))
+      );
+
+      const unseenFreshPosts = latestPosts.filter((post) => post?._id && !existingIds.has(post._id));
+      if (!unseenFreshPosts.length) return oldData;
+
+      const updatedPages = [...oldData.pages];
+      const lastPageIndex = updatedPages.length - 1;
+      const lastPage = updatedPages[lastPageIndex] || { items: [], pagination: {} };
+
+      updatedPages[lastPageIndex] = {
+        ...lastPage,
+        items: [...(lastPage.items || []), ...unseenFreshPosts],
+        pagination: {
+          ...(lastPage.pagination || {}),
+          total: (lastPage.pagination?.total || 0) + unseenFreshPosts.length
+        }
+      };
+
+      return {
+        ...oldData,
+        pages: updatedPages
+      };
+    });
+  }, [latestPosts, queryClient, sortMode]);
 
   const handleLoadMore = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
@@ -77,7 +131,7 @@ const FeedScreen = ({ onNavClick }) => {
         content: newContent,
         tags: newCategory
       });
-      queryClient.setQueryData(['posts', PAGE_SIZE], oldData => {
+      queryClient.setQueryData(['posts', PAGE_SIZE, sortMode], oldData => {
         if (!oldData?.pages?.length) return oldData;
 
         const firstPage = oldData.pages[0] || { items: [], pagination: { page: 1, limit: PAGE_SIZE, total: 0, hasMore: false, nextPage: null } };
@@ -97,7 +151,7 @@ const FeedScreen = ({ onNavClick }) => {
       });
     } catch (error) {
         console.log("Error while creating the post", error);
-    }};
+  }};
 
   const handleDeletePost = (id) => {
     setPostToDelete(id);
@@ -129,6 +183,21 @@ const FeedScreen = ({ onNavClick }) => {
         setActiveTab={setActiveHTab}
       />
       <ScrollArea>
+        <div className="flex items-center gap-2 mb-2 overflow-x-auto scrollbar-hide">
+          {['hot', 'new', 'top'].map((mode) => (
+            <button
+              key={mode}
+              onClick={() => setSortMode(mode)}
+              className={`px-3 py-1.5 rounded-full text-[11px] font-semibold uppercase tracking-wide border transition-colors ${
+                sortMode === mode
+                  ? 'bg-primary/20 border-primary/50 text-primary-mid'
+                  : 'bg-bg2 border-border text-text3 hover:text-text'
+              }`}
+            >
+              {mode}
+            </button>
+          ))}
+        </div>
         <ComposeBox onPost={handleCreatePost} />
         <AttendanceMini onNavClick={onNavClick} />
         {isLoading ? (
@@ -190,7 +259,7 @@ const FeedScreen = ({ onNavClick }) => {
         onConfirm={async () => {
           try {
             await api.delete(`/posts/${postToDelete}`);
-            queryClient.setQueryData(['posts', PAGE_SIZE], oldData => {
+            queryClient.setQueryData(['posts', PAGE_SIZE, sortMode], oldData => {
               if (!oldData?.pages?.length) return oldData;
 
               const updatedPages = oldData.pages.map((page) => ({

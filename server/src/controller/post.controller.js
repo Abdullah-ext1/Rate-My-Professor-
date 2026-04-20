@@ -40,6 +40,7 @@ const getPosts = asyncHandler(async( req, res ) => {
   const page = Math.max(Number(req.query.page) || 1, 1)
   const limit = Math.max(Number(req.query.limit) || 10, 1)
   const skip = (page - 1) * limit
+  const sortMode = ['hot', 'new', 'top'].includes(req.query.sort) ? req.query.sort : 'hot'
 
   const filter = {
     isAnnouncement: false,
@@ -48,11 +49,60 @@ const getPosts = asyncHandler(async( req, res ) => {
 
   const total = await Post.countDocuments(filter)
 
-  const posts = await Post.find(filter)
-    .populate('owner', 'name')
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(limit)
+  const now = new Date()
+  const sortStageByMode = {
+    hot: { hotScore: -1, createdAt: -1 },
+    new: { createdAt: -1 },
+    top: { likesCount: -1, commentsCount: -1, createdAt: -1 }
+  }
+
+  const basePipeline = [
+    { $match: filter },
+    {
+      $addFields: {
+        likesCount: { $size: { $ifNull: ['$likes', []] } },
+        commentsCount: { $size: { $ifNull: ['$comments', []] } },
+        hoursSinceCreated: {
+          $divide: [
+            { $subtract: [now, '$createdAt'] },
+            1000 * 60 * 60
+          ]
+        }
+      }
+    },
+    {
+      $addFields: {
+        engagementScore: {
+          $add: [
+            { $multiply: ['$likesCount', 3] },
+            { $multiply: ['$commentsCount', 4] },
+            { $min: [{ $divide: [{ $ifNull: ['$views', 0] }, 20] }, 5] }
+          ]
+        },
+        freshnessBoost: {
+          $max: [
+            { $multiply: [{ $subtract: [36, '$hoursSinceCreated'] }, 0.6] },
+            0
+          ]
+        }
+      }
+    },
+    {
+      $addFields: {
+        hotScore: {
+          $add: ['$engagementScore', '$freshnessBoost']
+        }
+      }
+    },
+    { $sort: sortStageByMode[sortMode] }
+  ]
+
+  const postsPipeline = isPaginatedRequest
+    ? [...basePipeline, { $skip: skip }, { $limit: limit }]
+    : basePipeline
+
+  const aggregatedPosts = await Post.aggregate(postsPipeline)
+  const posts = await Post.populate(aggregatedPosts, { path: 'owner', select: 'name' })
 
   const hasMore = skip + posts.length < total
 
@@ -72,6 +122,7 @@ const getPosts = asyncHandler(async( req, res ) => {
       pagination: {
         page,
         limit,
+        sort: sortMode,
         total,
         hasMore,
         nextPage: hasMore ? page + 1 : null

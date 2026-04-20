@@ -1,34 +1,35 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import LoginScreen from './pages/LoginScreen';
-import FeedScreen from './pages/FeedScreen';
-import ProfessorsScreen from './pages/ProfessorsScreen';
-import AnnouncementScreen from './pages/AnnouncementScreen';
-import PYQsScreen from './pages/PYQsScreen';
-import ChatScreen from './pages/ChatScreen';
-import PostScreen from './pages/PostScreen';
-import ProfileScreen from './pages/ProfileScreen';
-import AdminScreen from './pages/AdminScreen';
-import NotificationScreen from './pages/NotificationScreen';
-import LeaderboardScreen from './pages/LeaderboardScreen';
-import RateProfessorScreen from './pages/RateProfessorScreen';
-import OnBoardingScreen from './pages/OnBoardingScreen';
-import PrivacyPolicyScreen from './pages/PrivacyPolicyScreen';
-import ModeratorDashboard from './pages/ModeratorDashboard';
-import AttendanceScreen from './pages/AttendanceScreen';
 import { AnimatePresence, motion } from 'framer-motion';
 import {ProtectedRoute} from "./context/ProtectedRoute"
 import { useAuth } from './context/AuthContext';
 
+// Lazy load heavy pages for code-splitting
+const FeedScreen = lazy(() => import('./pages/FeedScreen'));
+const ProfessorsScreen = lazy(() => import('./pages/ProfessorsScreen'));
+const AnnouncementScreen = lazy(() => import('./pages/AnnouncementScreen'));
+const PYQsScreen = lazy(() => import('./pages/PYQsScreen'));
+const ChatScreen = lazy(() => import('./pages/ChatScreen'));
+const PostScreen = lazy(() => import('./pages/PostScreen'));
+const ProfileScreen = lazy(() => import('./pages/ProfileScreen'));
+const AdminScreen = lazy(() => import('./pages/AdminScreen'));
+const NotificationScreen = lazy(() => import('./pages/NotificationScreen'));
+const LeaderboardScreen = lazy(() => import('./pages/LeaderboardScreen'));
+const RateProfessorScreen = lazy(() => import('./pages/RateProfessorScreen'));
+const OnBoardingScreen = lazy(() => import('./pages/OnBoardingScreen'));
+const PrivacyPolicyScreen = lazy(() => import('./pages/PrivacyPolicyScreen'));
+const ModeratorDashboard = lazy(() => import('./pages/ModeratorDashboard'));
+const AttendanceScreen = lazy(() => import('./pages/AttendanceScreen'));
+
 
 const LoadingScreen = () => (
   <div className="flex flex-col flex-1 bg-bg h-screen w-full items-center justify-center">
-    <div className="flex flex-col items-center gap-4">
-      <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
-      <p className="text-text2 font-syne animate-pulse text-sm">Waking up the server...</p>
-    </div>
+    <div className="w-full h-full" />
   </div>
 );
+
+const SuspenseLoader = () => <LoadingScreen />;
 
 const RootRedirect = () => {
     const { user, loading } = useAuth();
@@ -126,105 +127,131 @@ const AppLayout = () => {
 
           <Route path="/feed" element={
             <ProtectedRoute>
-              <div className="animate-fade-in">
-                <FeedScreen onNavClick={handleNavClick} />
-              </div>
+              <Suspense fallback={<SuspenseLoader />}>
+                <div className="animate-fade-in">
+                  <FeedScreen onNavClick={handleNavClick} />
+                </div>
+              </Suspense>
             </ProtectedRoute>
           } />
 
           <Route path="/professors" element={
             <ProtectedRoute>
-              <div className="animate-fade-in">
-                <ProfessorsScreen onNavClick={handleNavClick} />
-              </div>
+              <Suspense fallback={<SuspenseLoader />}>
+                <div className="animate-fade-in">
+                  <ProfessorsScreen onNavClick={handleNavClick} />
+                </div>
+              </Suspense>
             </ProtectedRoute>
           } />
 
           <Route path="/announcement" element={
             <ProtectedRoute>
-              <div className="animate-fade-in">
-                <AnnouncementScreen onNavClick={handleNavClick} />
-              </div>
+              <Suspense fallback={<SuspenseLoader />}>
+                <div className="animate-fade-in">
+                  <AnnouncementScreen onNavClick={handleNavClick} />
+                </div>
+              </Suspense>
             </ProtectedRoute>
           } />
 
           <Route path="/pyqs" element={
             <ProtectedRoute>
-              <div className="animate-fade-in">
-                <PYQsScreen onNavClick={handleNavClick} />
-              </div>
+              <Suspense fallback={<SuspenseLoader />}>
+                <div className="animate-fade-in">
+                  <PYQsScreen onNavClick={handleNavClick} />
+                </div>
+              </Suspense>
             </ProtectedRoute>
           } />
 
           <Route path="/chat" element={
             <ProtectedRoute>
-              <div className="animate-fade-in">
-                <ChatScreen onNavClick={handleNavClick} />
-              </div>
+              <Suspense fallback={<SuspenseLoader />}>
+                <div className="animate-fade-in">
+                  <ChatScreen onNavClick={handleNavClick} />
+                </div>
+              </Suspense>
             </ProtectedRoute>
           } />
 
           <Route path="/attendance" element={
             <ProtectedRoute>
-              <div className="animate-fade-in">
-                <AttendanceScreen onNavClick={handleNavClick} />
-              </div>
+              <Suspense fallback={<SuspenseLoader />}>
+                <div className="animate-fade-in">
+                  <AttendanceScreen onNavClick={handleNavClick} />
+                </div>
+              </Suspense>
             </ProtectedRoute>
           } />
 
           <Route path="/post/:id" element={
             <ProtectedRoute>
-              <div className="animate-fade-in">
-                <PostScreen onNavClick={handleNavClick} postData={selectedPost} />
-              </div>
+              <Suspense fallback={<SuspenseLoader />}>
+                <div className="animate-fade-in">
+                  <PostScreen onNavClick={handleNavClick} postData={selectedPost} />
+                </div>
+              </Suspense>
             </ProtectedRoute>
           } />
 
           <Route path="/notifications" element={
             <ProtectedRoute>
-              <div className="animate-fade-in">
-                <NotificationScreen onNavClick={handleNavClick} />
-              </div>
+              <Suspense fallback={<SuspenseLoader />}>
+                <div className="animate-fade-in">
+                  <NotificationScreen onNavClick={handleNavClick} />
+                </div>
+              </Suspense>
             </ProtectedRoute>
           } />
 
           <Route path="/leaderboard" element={
             <ProtectedRoute>
-              <div className="animate-fade-in">
-                <LeaderboardScreen onNavClick={handleNavClick} />
-              </div>
+              <Suspense fallback={<SuspenseLoader />}>
+                <div className="animate-fade-in">
+                  <LeaderboardScreen onNavClick={handleNavClick} />
+                </div>
+              </Suspense>
             </ProtectedRoute>
           } />
 
           <Route path="/rate-professor" element={
             <ProtectedRoute>
-              <div className="animate-fade-in">
-                <RateProfessorScreen onNavClick={handleNavClick} />
-              </div>
+              <Suspense fallback={<SuspenseLoader />}>
+                <div className="animate-fade-in">
+                  <RateProfessorScreen onNavClick={handleNavClick} />
+                </div>
+              </Suspense>
             </ProtectedRoute>
           } />
 
           <Route path="/profile" element={
             <ProtectedRoute>
-              <div className="animate-fade-in">
-                <ProfileScreen onNavClick={handleNavClick} onBack={() => navigate('/chat')} />
-              </div>
+              <Suspense fallback={<SuspenseLoader />}>
+                <div className="animate-fade-in">
+                  <ProfileScreen onNavClick={handleNavClick} onBack={() => navigate('/chat')} />
+                </div>
+              </Suspense>
             </ProtectedRoute>
           } />
 
           <Route path="/admin" element={
             <ProtectedRoute>
-              <div className="animate-fade-in">
-                <AdminScreen onNavClick={handleNavClick} onBack={() => navigate('/profile')} />
-              </div>
+              <Suspense fallback={<SuspenseLoader />}>
+                <div className="animate-fade-in">
+                  <AdminScreen onNavClick={handleNavClick} onBack={() => navigate('/profile')} />
+                </div>
+              </Suspense>
             </ProtectedRoute>
           } />
 
           <Route path="/moderator-dashboard" element={
             <ProtectedRoute>
-              <div className="animate-fade-in">
-                <ModeratorDashboard onNavClick={handleNavClick} />
-              </div>
+              <Suspense fallback={<SuspenseLoader />}>
+                <div className="animate-fade-in">
+                  <ModeratorDashboard onNavClick={handleNavClick} />
+                </div>
+              </Suspense>
             </ProtectedRoute>
           } />
           
@@ -235,11 +262,19 @@ const AppLayout = () => {
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.3, ease: 'easeOut' }}
             >
-              <PrivacyPolicyScreen onNavClick={handleNavClick} />
+              <Suspense fallback={<SuspenseLoader />}>
+                <PrivacyPolicyScreen onNavClick={handleNavClick} />
+              </Suspense>
             </motion.div>
           } />
           
-          <Route path="/onboarding" element={<div className="animate-fade-in"><OnBoardingScreen /></div>} />
+          <Route path="/onboarding" element={
+            <Suspense fallback={<SuspenseLoader />}>
+              <div className="animate-fade-in">
+                <OnBoardingScreen />
+              </div>
+            </Suspense>
+          } />
           <Route path="/" element={<RootRedirect/>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

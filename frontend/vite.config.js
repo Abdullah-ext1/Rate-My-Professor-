@@ -60,4 +60,26 @@ export default defineConfig({
       }
     })
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Split vendor libraries into separate chunk
+          'vendor': [
+            'react',
+            'react-dom',
+            'react-router-dom',
+            '@tanstack/react-query',
+            'framer-motion',
+            'axios'
+          ],
+          // Split UI libraries
+          'ui-libs': [
+            'react-hot-toast',
+            '@vercel/analytics'
+          ]
+        }
+      }
+    }
+  }
 })

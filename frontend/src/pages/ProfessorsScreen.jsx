@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import ProfessorReviewsScreen from "./ProfessorReviewsScreen";
 import { ProfCardSkeleton } from "../components/Skeleton";
 import ProfCard from "../components/ProfCard";
@@ -8,6 +9,34 @@ import AttendanceCard from "../components/AttendanceCard";
 import AttendanceFlexCard from "../components/AttendanceFlexCard";
 import api from "../context/api.js";
 import { useAuth } from "../context/AuthContext";
+
+const mapProfessor = (prof) => ({
+  id: prof._id,
+  name: prof.name,
+  initials: prof.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase(),
+  subject: prof.subjects.join(", "),
+  subjectsArray: prof.subjects || [],
+  department: prof.department,
+  rating: prof.averageRating || 0,
+  reviews: prof.totalReviews || 0,
+  tags: [],
+});
+
+const mapAttendance = (att) => {
+  const percent = att.totalClasses > 0 ? Math.round((att.classAttended / att.totalClasses) * 100) : 0;
+  const status = percent < 75 ? "danger" : percent < 80 ? "warn" : "safe";
+
+  return {
+    id: att._id,
+    subject: att.subject,
+    prof: att.professor?.name || "Unknown",
+    attended: att.classAttended,
+    total: att.totalClasses,
+    percent,
+    status,
+    canBunk: att.bunkmeter > 0 ? att.bunkmeter.toString() : "Cannot bunk",
+  };
+};
 
 const TopNav = ({ onNavClick, userCollege }) => (
   <div className="fixed top-0 left-0 right-0 bg-bg px-4 py-2.5 flex items-center justify-between flex-shrink-0 border-b border-border z-30">
@@ -151,6 +180,7 @@ const ShareModal = ({ isOpen, onClose, onShare, subjects }) => {
 
 const ProfessorsScreen = ({ onNavClick }) => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState(location.state?.professor === "attendance" ? "attendance" : "professors");
   const [selectedProfessor, setSelectedProfessor] = useState(null);
@@ -160,55 +190,39 @@ const ProfessorsScreen = ({ onNavClick }) => {
     subject: "",
     department: "",
   });
-  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const [professors, setProfessors] = useState([]);
-  const [attendances, setAttendances] = useState([]);
   const [shareModalOpen, setShareModalOpen] = useState(false);
 
-  useEffect(() => {
-  const fetchData = async () => {
-    setIsLoading(true)
-    try {
-      const profsRes = await api.get("/professor", { withCredentials: true })
-      const mapped = profsRes.data.data.map((prof) => ({
-        id: prof._id,
-        name: prof.name,
-        initials: prof.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase(),
-        subject: prof.subjects.join(", "),
-        subjectsArray: prof.subjects || [],
-        department: prof.department,
-        rating: prof.averageRating || 0,
-        reviews: prof.totalReviews || 0,
-        tags: [],
-      }))
-      setProfessors(mapped)
+  const {
+    data: professors = [],
+    isLoading: isProfessorsLoading,
+  } = useQuery({
+    queryKey: ["professors"],
+    queryFn: async () => {
+      const profsRes = await api.get("/professor", { withCredentials: true });
+      return (profsRes.data?.data || []).map(mapProfessor);
+    },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
 
-      const attRes = await api.get("/attendance", { withCredentials: true })
-      const mappedAtt = attRes.data.data.map((att) => {
-        const percent = att.totalClasses > 0 ? Math.round((att.classAttended / att.totalClasses) * 100) : 0
-        const status = percent < 75 ? "danger" : percent < 80 ? "warn" : "safe"
-        return {
-          id: att._id,
-          subject: att.subject,
-          prof: att.professor?.name || "Unknown",
-          attended: att.classAttended,
-          total: att.totalClasses,
-          percent,
-          status,
-          canBunk: att.bunkmeter > 0 ? att.bunkmeter.toString() : "Cannot bunk",
-        }
-      })
-      setAttendances(mappedAtt)
-    } catch (error) {
-      console.error("Error fetching data:", error)
-    } finally {
-      setIsLoading(false)
-    }
-  }
-  fetchData()
-}, []); 
+  const {
+    data: attendances = [],
+    isLoading: isAttendanceLoading,
+  } = useQuery({
+    queryKey: ["attendances"],
+    queryFn: async () => {
+      const attRes = await api.get("/attendance", { withCredentials: true });
+      return (attRes.data?.data || []).map(mapAttendance);
+    },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  const isLoading = activeTab === "professors" ? isProfessorsLoading : isAttendanceLoading;
 
   const [bulkEditModal, setBulkEditModal] = useState({
     isOpen: false,
@@ -257,7 +271,7 @@ const ProfessorsScreen = ({ onNavClick }) => {
         attended: action === "attend",
       });
 
-      setAttendances((prev) =>
+      queryClient.setQueryData(["attendances"], (prev = []) =>
         prev.map((record) => {
           if (record.id === id) {
             if (action === "attend") {
@@ -286,7 +300,7 @@ const ProfessorsScreen = ({ onNavClick }) => {
           totalLectures: parseInt(bulkEditModal.total) || 0,
         });
 
-        setAttendances((prev) =>
+        queryClient.setQueryData(["attendances"], (prev = []) =>
           prev.map((record) => {
             if (record.id === bulkEditModal.id) {
               return {
@@ -336,7 +350,7 @@ const ProfessorsScreen = ({ onNavClick }) => {
             tags: [],
             department: createdItem.department,
           };
-          setProfessors([...professors, newProf]);
+          queryClient.setQueryData(["professors"], (prev = []) => [...prev, newProf]);
         }
 
         setShowAddModal(false);
@@ -371,7 +385,7 @@ const ProfessorsScreen = ({ onNavClick }) => {
         if (currentUserRole !== "admin" && currentUserRole !== "moderator") {
           showToast("Professor edits submitted for review by moderators! ✏️");
         } else {
-          setProfessors(professors.map(p => {
+          queryClient.setQueryData(["professors"], (prev = []) => prev.map(p => {
             if (p.id === editingProfId) {
               return {
                 ...p,
@@ -425,7 +439,7 @@ const ProfessorsScreen = ({ onNavClick }) => {
           status: "danger",
           canBunk: "0",
         };
-        setAttendances([...attendances, newRecord]);
+  queryClient.setQueryData(["attendances"], (prev = []) => [...prev, newRecord]);
         setShowAddAttendanceModal(false);
         setNewAttendance({ professorId: "", subject: "", customSubject: "" });
       } catch (error) {
@@ -435,7 +449,7 @@ const ProfessorsScreen = ({ onNavClick }) => {
   };
 
   const handleRemoveProfessor = (id) => {
-    setProfessors((prev) => prev.filter((p) => p.id !== id));
+    queryClient.setQueryData(["professors"], (prev = []) => prev.filter((p) => p.id !== id));
   };
 
   // Sort them by rating highest to lowest
