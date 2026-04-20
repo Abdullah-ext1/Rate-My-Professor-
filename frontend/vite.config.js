@@ -40,19 +40,19 @@ export default defineConfig({
         start_url: '/',
         icons: [
           {
-            src: '/campus_logo.svg',
+            src: '/file.svg',
             sizes: 'any',
             type: 'image/svg+xml',
             purpose: 'any'
           },
           {
-            src: '/campus_logo.svg',
+            src: '/file.svg',
             sizes: 'any',
             type: 'image/svg+xml',
             purpose: 'maskable'
           },
           {
-            src: '/campus_logo.svg',
+            src: '/file.svg',
             sizes: 'any',
             type: 'image/svg+xml'
           }

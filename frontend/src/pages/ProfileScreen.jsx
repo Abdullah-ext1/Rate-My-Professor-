@@ -3,6 +3,7 @@ import { useAuth } from "../context/AuthContext";
 import api from "../context/api.js";
 import { motion, AnimatePresence } from 'framer-motion';
 import { DEPARTMENTS } from '../utils/departments.js';
+import toast from 'react-hot-toast';
 
 const EditProfileModal = ({ isOpen, onClose, user, onUpdate }) => {
   const [name, setName] = useState(user?.name || '');
@@ -147,30 +148,59 @@ const ProfileScreen = ({ onNavClick, currentUserRole }) => {
       setDeferredPrompt(e);
       window._deferredPrompt = e;
     };
+
+    const handleAppInstalled = () => {
+      setDeferredPrompt(null);
+      window._deferredPrompt = null;
+      toast.success('App installed successfully!');
+    };
     
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
     };
   }, []);
 
   const handleInstallClick = async () => {
+    const isStandalone =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      window.navigator.standalone;
+    const isIOS =
+      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+    if (isStandalone) {
+      toast.success('App is already installed on this device.');
+      return;
+    }
+
     if (deferredPrompt) {
       deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
       if (outcome === 'accepted') {
         setDeferredPrompt(null);
         window._deferredPrompt = null;
-      }
-    } else {
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-      if (isIOS) {
-        alert('To install this app on your iOS device, tap the "Share" button and then "Add to Home Screen".');
+        toast.success('Install started. Check your home screen in a moment.');
       } else {
-        alert('App is already installed or not supported by this browser.');
+        toast('Install cancelled for now.');
       }
+      return;
     }
+
+    if (isIOS) {
+      toast('On iPhone/iPad: tap Share → Add to Home Screen.');
+      return;
+    }
+
+    if (!window.isSecureContext) {
+      toast.error('Install is available only on HTTPS or localhost.');
+      return;
+    }
+
+    toast('Install prompt is not available yet. Reload once, then try again in Chrome/Edge.');
   };
 
   return (

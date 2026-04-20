@@ -24,6 +24,10 @@ createRoot(document.getElementById('root')).render(
         <App />
         <Toaster 
           position="bottom-center"
+          containerStyle={{
+            zIndex: 99999,
+            bottom: '82px'
+          }}
           toastOptions={{
             style: {
               background: '#333',
