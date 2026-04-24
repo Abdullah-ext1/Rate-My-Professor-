@@ -14,6 +14,7 @@ export const AuthProvider = ({ children }) => {
       setUser(response.data.data);
     } catch (error) {
       setUser(null);
+      localStorage.removeItem('token'); 
     } finally {
       setLoading(false);
     }
@@ -25,6 +26,11 @@ export const AuthProvider = ({ children }) => {
     const token = params.get('token');
     
     if (token) {
+      localStorage.setItem('token', token);
+      
+      // ADD THIS: Remove the token from the URL so it doesn't linger
+      window.history.replaceState({}, document.title, window.location.pathname);
+
       fetchUser();
     } else {
       fetchUser();
