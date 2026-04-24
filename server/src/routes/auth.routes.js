@@ -26,12 +26,7 @@ router.get("/google/callback", passport.authenticate("google", {session: false})
       sameSite: "lax",
     });
 
-    const redirectURL =
-      process.env.NODE_ENV === "production"
-        ? "https://campus-three-black.vercel.app"
-        : "http://localhost:5173";
-
-    res.redirect(redirectURL);
+    res.redirect("https://campus-three-black.vercel.app");
   },
 )
 
