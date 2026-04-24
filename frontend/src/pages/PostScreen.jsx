@@ -6,6 +6,13 @@ import { useParams } from 'react-router-dom';
 import { timeAgo } from '../utils/timeAgo';
 import toast from 'react-hot-toast';
 
+const getInitials = (name) => {
+  if (!name) return '?';
+  const parts = name.trim().split(' ');
+  if (parts.length > 1) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  return parts[0].substring(0, 2).toUpperCase();
+};
+
 const PostScreen = ({ onNavClick, postData }) => {
   const { user } = useAuth();
   const { id } = useParams();
@@ -18,6 +25,7 @@ const PostScreen = ({ onNavClick, postData }) => {
   const [replyingTo, setReplyingTo] = useState(null);
   const [comments, setComments] = useState([]);
   const [deleteConfig, setDeleteConfig] = useState({ isOpen: false, type: '', commentId: null, replyId: null });
+  const [isCommenting, setIsCommenting] = useState(false);
   const inputRef = useRef(null);
 
   useEffect(() => {                  // ← add here
@@ -73,8 +81,9 @@ const PostScreen = ({ onNavClick, postData }) => {
   };
 
   const handlePostComment = async () => {
-    if (!commentText.trim()) return;
+    if (!commentText.trim() || isCommenting) return;
     try {
+      setIsCommenting(true);
       if (replyingTo) {
         await api.post(`/comments/${replyingTo.id}/reply`, { content: commentText });
         toast.success('Replied successfully!', { id: 'reply-post', duration: 2000 });
@@ -97,6 +106,8 @@ const PostScreen = ({ onNavClick, postData }) => {
       setReplyingTo(null);
     } catch (error) {
       console.log("Error posting comment", error);
+    } finally {
+      setIsCommenting(false);
     }
   };
   const toggleCommentLike = async (commentId) => {
@@ -247,9 +258,14 @@ const PostScreen = ({ onNavClick, postData }) => {
         {/* Post Header */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm flex-shrink-0 ${getAvatarStyles(post?.tags)}`}>👻</div>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${getAvatarStyles(post?.tags)}`}>{getInitials(post?.owner?.name)}</div>
             <div className="flex flex-col">
-              <span className="text-sm font-medium text-text">{post?.owner.name}</span>
+              <span
+                className="text-sm font-medium text-text hover:text-primary-mid cursor-pointer"
+                onClick={() => post?.owner?._id && onNavClick(`profile/${post.owner._id}`)}
+              >
+                {post?.owner.name}
+              </span>
               <span className="text-xs text-text3">{timeAgo(post?.createdAt)} ago</span>
             </div>
             <span className={`text-xs px-2 py-0.5 rounded-2xl border font-medium ml-2 capitalize ${getCategoryStyles(post?.tags)}`}>
@@ -335,7 +351,12 @@ const PostScreen = ({ onNavClick, postData }) => {
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-xs font-semibold text-text2 flex items-center gap-1">
-                      {comment.user.name}
+                      <span
+                        className="hover:text-primary-mid cursor-pointer"
+                        onClick={() => comment.user?._id && onNavClick(`profile/${comment.user._id}`)}
+                      >
+                        {comment.user.name}
+                      </span>
                       {comment.isMe && <span className="px-1 py-0.5 rounded-sm bg-primary bg-opacity-20 text-[10px] text-primary-mid scale-90">ME</span>}
                     </span>
                     <span className="text-xs text-text3">{timeAgo(comment.createdAt)}</span>
@@ -368,7 +389,12 @@ const PostScreen = ({ onNavClick, postData }) => {
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-xs font-semibold text-text2 flex items-center gap-1">
-                            {reply.user.name}
+                            <span
+                              className="hover:text-primary-mid cursor-pointer"
+                              onClick={() => reply.user?._id && onNavClick(`profile/${reply.user._id}`)}
+                            >
+                              {reply.user.name}
+                            </span>
                             {reply.isMe && <span className="px-1 py-0.5 rounded-sm bg-primary bg-opacity-20 text-[10px] text-primary-mid scale-90">ME</span>}
                           </span>
                           <span className="text-xs text-text3">{timeAgo(reply.createdAt)}</span>
@@ -412,7 +438,7 @@ const PostScreen = ({ onNavClick, postData }) => {
           </div>
         )}
         <div className="bg-bg2 border border-border2 rounded-3xl px-3 py-2.5 flex items-end gap-2.5">
-          <div className="w-7 h-7 rounded-full bg-opacity-20 bg-primary flex items-center justify-center text-xs flex-shrink-0 mt-0.5">🙋</div>
+          <div className="w-7 h-7 rounded-full bg-opacity-20 bg-primary flex items-center justify-center text-[10px] font-bold text-primary-mid flex-shrink-0 mt-0.5 font-syne">{getInitials(user?.name)}</div>
           <textarea
             ref={inputRef}
             value={commentText}
@@ -429,10 +455,10 @@ const PostScreen = ({ onNavClick, postData }) => {
           />
           <button
             onClick={handlePostComment}
-            disabled={!commentText.trim()}
+            disabled={!commentText.trim() || isCommenting}
             className="text-sm font-semibold text-primary-mid cursor-pointer hover:text-white transition-colors mb-0.5 pr-1 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Post
+            {isCommenting ? '...' : 'Post'}
           </button>
         </div>
       </div>

@@ -5,7 +5,14 @@ import { timeAgo } from '../utils/timeAgo';
 import AttendanceFlexCard from './AttendanceFlexCard';
 import toast from 'react-hot-toast';
 
-const PostCard = ({ id, handle, handleId, isLiked = false, likes, comments, onClick, onDelete, title, content, time, category, }) => {
+const getInitials = (name) => {
+  if (!name) return '?';
+  const parts = name.trim().split(' ');
+  if (parts.length > 1) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  return parts[0].substring(0, 2).toUpperCase();
+};
+
+const PostCard = ({ id, handle, handleId, isLiked = false, likes, comments, onClick, onDelete, onUserClick, title, content, time, category, }) => {
   const { user } = useAuth();
   const [liked, setLiked] = useState(isLiked);
   const [likeCount, setLikeCount] = useState(likes);
@@ -34,11 +41,9 @@ const PostCard = ({ id, handle, handleId, isLiked = false, likes, comments, onCl
     }
   };
 
-  const getAvatarEmoji = (cat) => {
-    switch (cat?.toLowerCase()) {
-      case 'attendance': return '📊';
-      default: return '👻';
-    }
+  const getAvatarContent = (cat) => {
+    if (cat?.toLowerCase() === 'attendance') return '📊';
+    return getInitials(handle);
   };
 
 
@@ -94,8 +99,18 @@ const PostCard = ({ id, handle, handleId, isLiked = false, likes, comments, onCl
         <div className="absolute top-0 right-0 w-40 h-40 bg-emerald-500/5 rounded-full blur-[40px] pointer-events-none -z-0" />
       )}
       <div className="relative z-10 flex items-center gap-1.5 mb-2">
-        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs flex-shrink-0 ${getAvatarStyles(category)}`}>{getAvatarEmoji(category)}</div>
-        <span className="text-xs font-medium text-text">{handle}</span>
+        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${getAvatarStyles(category)}`}>{getAvatarContent(category)}</div>
+        <span
+          className="text-xs font-medium text-text hover:text-primary-mid transition-colors"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (handleId && typeof onUserClick === 'function') {
+              onUserClick(handleId);
+            }
+          }}
+        >
+          {handle}
+        </span>
         <span className={`text-xs px-1.5 py-0.5 rounded-2xl border font-medium capitalize ${getCategoryStyles(category)}`}>{category}</span>
         <span className="text-xs text-text3 ml-auto">{timeAgo(time)}</span>
         

@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import api from '../context/api.js';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '../context/AuthContext';
 
-const ProfessorReviewsScreen = ({ professor, onBack, currentUserRole, onDelete }) => {
+const ProfessorReviewsScreen = ({ professor, onBack, currentUserRole, onDelete, onRate }) => {
 const queryClient = useQueryClient();
+const { user } = useAuth();
 
-const { data: reviews = [], isLoading, isError, error } = useQuery({
+const { data: reviews = [] } = useQuery({
   queryKey: ['professorReviews', professor.id],
   queryFn: async () => {
     const res = await api.get(`/ratings/${professor.id}`, { withCredentials: true })
@@ -14,10 +16,15 @@ const { data: reviews = [], isLoading, isError, error } = useQuery({
       rating: r.rating,
       title: 'Review',
       content: r.comment,
+      tags: r.tags || [],
       date: new Date(r.createdAt).toLocaleDateString(),
-      helpful: 0,
-      unhelpful: 0,
-      userVote: null
+      helpful: r.helpfulVotes?.length || 0,
+      unhelpful: r.unhelpfulVotes?.length || 0,
+      userVote: r.helpfulVotes?.includes(user?._id)
+        ? 'helpful'
+        : r.unhelpfulVotes?.includes(user?._id)
+        ? 'unhelpful'
+        : null
     }));
   },
   staleTime: 5 * 60 * 1000 // 5 minutes
@@ -25,7 +32,9 @@ const { data: reviews = [], isLoading, isError, error } = useQuery({
 
   const [filterRating, setFilterRating] = useState(null);
 
-  const handleVote = (id, type) => {
+  const handleVote = async (id, type) => {
+    const previousData = queryClient.getQueryData(['professorReviews', professor.id]) || [];
+
     queryClient.setQueryData(['professorReviews', professor.id], (old = []) => old.map(r => {
       if (r.id === id) {
         if (r.userVote === type) {
@@ -48,6 +57,24 @@ const { data: reviews = [], isLoading, isError, error } = useQuery({
       }
       return r;
     }));
+
+    try {
+      const res = await api.patch(`/ratings/vote/${id}`, { voteType: type }, { withCredentials: true });
+      const voteData = res.data?.data;
+
+      queryClient.setQueryData(['professorReviews', professor.id], (old = []) => old.map(r => (
+        r.id === id
+          ? {
+              ...r,
+              helpful: voteData?.helpful ?? r.helpful,
+              unhelpful: voteData?.unhelpful ?? r.unhelpful,
+              userVote: voteData?.userVote ?? r.userVote,
+            }
+          : r
+      )));
+    } catch {
+      queryClient.setQueryData(['professorReviews', professor.id], previousData);
+    }
   };
 
   const filteredReviews = filterRating ? reviews.filter(r => r.rating === filterRating) : reviews;
@@ -91,7 +118,13 @@ const { data: reviews = [], isLoading, isError, error } = useQuery({
           <h1 className="text-lg font-bold text-text font-syne">{professor.name}</h1>
           <p className="text-xs text-text3">{professor.department}</p>
         </div>
-        <div className="flex-1 flex justify-end">
+        <div className="flex-1 flex justify-end items-center gap-2">
+          <button
+            onClick={onRate}
+            className="px-3 py-1.5 rounded-xl bg-primary/20 border border-primary/35 text-primary-mid text-xs font-semibold hover:bg-primary/30 transition-colors"
+          >
+            Rate
+          </button>
           {currentUserRole === 'admin' && (
             <button 
               onClick={() => {
@@ -107,7 +140,7 @@ const { data: reviews = [], isLoading, isError, error } = useQuery({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto scrollbar-hide">
+  <div className="flex-1 overflow-y-auto scrollbar-hide pb-24">
         {/* Professor Stats */}
         <div className="px-4 py-4 bg-bg2 border-b border-border">
           <div className="flex items-center justify-between mb-3">
@@ -168,35 +201,51 @@ const { data: reviews = [], isLoading, isError, error } = useQuery({
 
                 <p className="text-xs text-text3 leading-relaxed">{review.content}</p>
 
-                <div className="flex gap-3 text-xs">
-                  <span className={`px-2.5 py-1 rounded-full border ${
-                    review.difficulty === 'Easy' 
-                      ? 'bg-accent-teal/10 border-accent-teal/30 text-accent-teal'
-                      : review.difficulty === 'Medium'
-                      ? 'bg-accent-amber/10 border-accent-amber/30 text-accent-amber'
-                      : 'bg-accent-red/10 border-accent-red/30 text-accent-red'
-                  }`}>
-                    {review.difficulty}
-                  </span>
-                  {review.wouldTakeAgain && (
-                    <span className="px-2.5 py-1 rounded-full border bg-primary/10 border-primary/30 text-primary-mid">
-                      Would take again
-                    </span>
-                  )}
-                </div>
+                {review.tags?.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {review.tags.map((tag) => (
+                      <span key={tag} className="px-2.5 py-1 rounded-full border bg-primary/10 border-primary/25 text-primary-mid text-[11px] font-medium">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {(review.difficulty || review.wouldTakeAgain) && (
+                  <div className="flex gap-3 text-xs">
+                    {review.difficulty && (
+                      <span className={`px-2.5 py-1 rounded-full border ${
+                        review.difficulty === 'Easy' 
+                          ? 'bg-accent-teal/10 border-accent-teal/30 text-accent-teal'
+                          : review.difficulty === 'Medium'
+                          ? 'bg-accent-amber/10 border-accent-amber/30 text-accent-amber'
+                          : 'bg-accent-red/10 border-accent-red/30 text-accent-red'
+                      }`}>
+                        {review.difficulty}
+                      </span>
+                    )}
+                    {review.wouldTakeAgain && (
+                      <span className="px-2.5 py-1 rounded-full border bg-primary/10 border-primary/30 text-primary-mid">
+                        Would take again
+                      </span>
+                    )}
+                  </div>
+                )}
 
                 <div className="flex items-center gap-3 pt-2 border-t border-border">
-                  <button onClick={() => handleVote(review.id, 'helpful')} className={`flex items-center gap-1 text-xs transition-colors ${review.userVote === 'helpful' ? 'text-primary-mid' : 'text-text3 hover:text-text'}`}>
-                    <svg viewBox="0 0 24 24" fill={review.userVote === 'helpful' ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" width="14" height="14">
-                      <polyline points="1 12 5 9 1 6"></polyline>
+                  <button onClick={() => handleVote(review.id, 'helpful')} className={`flex items-center gap-1.5 text-xs transition-colors px-2 py-1 rounded-lg ${review.userVote === 'helpful' ? 'text-primary-mid bg-primary/10' : 'text-text3 hover:text-text hover:bg-bg3'}`}>
+                    <svg viewBox="0 0 24 24" fill={review.userVote === 'helpful' ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="15" height="15">
+                      <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"></path>
+                      <path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path>
                     </svg>
-                    <span>{review.helpful}</span>
+                    <span className="font-medium">{review.helpful}</span>
                   </button>
-                  <button onClick={() => handleVote(review.id, 'unhelpful')} className={`flex items-center gap-1 text-xs transition-colors ${review.userVote === 'unhelpful' ? 'text-accent-red' : 'text-text3 hover:text-text'}`}>
-                    <svg viewBox="0 0 24 24" fill={review.userVote === 'unhelpful' ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" width="14" height="14">
-                      <polyline points="23 12 19 15 23 18"></polyline>
+                  <button onClick={() => handleVote(review.id, 'unhelpful')} className={`flex items-center gap-1.5 text-xs transition-colors px-2 py-1 rounded-lg ${review.userVote === 'unhelpful' ? 'text-accent-red bg-accent-red/10' : 'text-text3 hover:text-text hover:bg-bg3'}`}>
+                    <svg viewBox="0 0 24 24" fill={review.userVote === 'unhelpful' ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="15" height="15">
+                      <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3H10z"></path>
+                      <path d="M17 2h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"></path>
                     </svg>
-                    <span>{review.unhelpful}</span>
+                    <span className="font-medium">{review.unhelpful}</span>
                   </button>
                 </div>
               </div>

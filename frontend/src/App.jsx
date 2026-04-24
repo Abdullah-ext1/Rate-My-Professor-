@@ -1,9 +1,14 @@
-import { useState, useEffect, Suspense, lazy } from 'react';
+import { useState, useEffect, Suspense, lazy, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import LoginScreen from './pages/LoginScreen';
 import { AnimatePresence, motion } from 'framer-motion';
 import {ProtectedRoute} from "./context/ProtectedRoute"
+import api from './context/api';
 import { useAuth } from './context/AuthContext';
+import { isNotificationSoundEnabled, playNotificationSound, showSystemNotification, warmupAudioContext } from './utils/notificationSound';
+import { io } from 'socket.io-client';
+import { registerPushNotifications } from './utils/pushSubscription';
 
 // Lazy load heavy pages for code-splitting
 const FeedScreen = lazy(() => import('./pages/FeedScreen'));
@@ -13,6 +18,7 @@ const PYQsScreen = lazy(() => import('./pages/PYQsScreen'));
 const ChatScreen = lazy(() => import('./pages/ChatScreen'));
 const PostScreen = lazy(() => import('./pages/PostScreen'));
 const ProfileScreen = lazy(() => import('./pages/ProfileScreen'));
+const UserProfileScreen = lazy(() => import('./pages/UserProfileScreen'));
 const AdminScreen = lazy(() => import('./pages/AdminScreen'));
 const NotificationScreen = lazy(() => import('./pages/NotificationScreen'));
 const LeaderboardScreen = lazy(() => import('./pages/LeaderboardScreen'));
@@ -42,9 +48,28 @@ const RootRedirect = () => {
 };
 // Main App Layout Component (handles navigation and footer)
 const AppLayout = () => {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const location = useLocation();
   const [selectedPost, setSelectedPost] = useState(null);
+  const previousUnreadRef = useRef(0);
+  const notificationSocketRef = useRef(null);
+
+  // Warm up AudioContext on first user interaction (required by modern browsers)
+  useEffect(() => {
+    const handleFirstInteraction = () => {
+      warmupAudioContext();
+      document.removeEventListener('click', handleFirstInteraction);
+      document.removeEventListener('touchstart', handleFirstInteraction);
+    };
+    document.addEventListener('click', handleFirstInteraction, { once: true });
+    document.addEventListener('touchstart', handleFirstInteraction, { once: true });
+    return () => {
+      document.removeEventListener('click', handleFirstInteraction);
+      document.removeEventListener('touchstart', handleFirstInteraction);
+    };
+  }, []);
 
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showPwaPrompt, setShowPwaPrompt] = useState(false);
@@ -84,6 +109,79 @@ const AppLayout = () => {
       if (timerId) clearTimeout(timerId);
     };
   }, []);
+
+  const { data: unreadCount = 0 } = useQuery({
+    queryKey: ['notifications', 'unread'],
+    queryFn: async () => {
+      const res = await api.get('/notifications/unread', { withCredentials: true });
+      return Number(res.data?.data || 0);
+    },
+    enabled: !!user,
+    staleTime: 10 * 1000,
+    refetchInterval: 20 * 1000,
+    refetchOnWindowFocus: true,
+  });
+
+  useEffect(() => {
+    if (!user) {
+      previousUnreadRef.current = 0;
+      return;
+    }
+
+    // Register PWA push notifications
+    registerPushNotifications();
+
+    if (previousUnreadRef.current === 0) {
+      previousUnreadRef.current = unreadCount;
+      return;
+    }
+
+    if (unreadCount > previousUnreadRef.current && isNotificationSoundEnabled()) {
+      playNotificationSound();
+      showSystemNotification({
+        title: 'campus.',
+        body: 'You have a new notification.'
+      });
+    }
+
+    previousUnreadRef.current = unreadCount;
+  }, [unreadCount, user]);
+
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken');
+    if (!user || !token || notificationSocketRef.current) return;
+
+    const socketUrl = import.meta.env.VITE_BACKEND_URL.replace('/api', '');
+    const socket = io(socketUrl, {
+      withCredentials: true,
+      auth: { token },
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      reconnectionAttempts: 5
+    });
+
+    notificationSocketRef.current = socket;
+
+    socket.on('notification', (payload) => {
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+
+      if (isNotificationSoundEnabled()) {
+        playNotificationSound();
+      }
+
+      showSystemNotification({
+        title: 'campus.',
+        body: payload?.content || 'You have a new notification.'
+      });
+    });
+
+    return () => {
+      socket.disconnect();
+      notificationSocketRef.current = null;
+    };
+  }, [user, queryClient]);
 
   const handleInstallPwa = async () => {
     if (deferredPrompt) {
@@ -231,6 +329,16 @@ const AppLayout = () => {
               <Suspense fallback={<SuspenseLoader />}>
                 <div className="animate-fade-in">
                   <ProfileScreen onNavClick={handleNavClick} onBack={() => navigate('/chat')} />
+                </div>
+              </Suspense>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/profile/:userId" element={
+            <ProtectedRoute>
+              <Suspense fallback={<SuspenseLoader />}>
+                <div className="animate-fade-in">
+                  <UserProfileScreen onNavClick={handleNavClick} />
                 </div>
               </Suspense>
             </ProtectedRoute>

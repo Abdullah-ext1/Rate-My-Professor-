@@ -183,7 +183,7 @@ const FeedScreen = ({ onNavClick }) => {
         setActiveTab={setActiveHTab}
       />
       <ScrollArea>
-        <div className="flex items-center gap-2 mb-2 overflow-x-auto scrollbar-hide">
+        <div className="flex items-center gap-2 mt-4 mb-2 overflow-x-auto scrollbar-hide">
           {['hot', 'new', 'top'].map((mode) => (
             <button
               key={mode}
@@ -219,6 +219,7 @@ const FeedScreen = ({ onNavClick }) => {
                 key={post._id}
                 id={post._id}
                 onDelete={handleDeletePost}
+                onUserClick={(userId) => onNavClick(`profile/${userId}`)}
                 handleId={post.owner?._id}
                 onClick={(post) => onNavClick(`post/${post.id}`)}
                 handle={post.owner?.name}

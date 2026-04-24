@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken";
 import { verifyJwt } from "../middlewares/verifyJwt.js"
 import { verifyAdmin } from "../middlewares/verifyAdmin.js"
 import { verifyModerator } from "../middlewares/verifyModerator.js"
-import { bannedUser, changeAccountDetails, getCurrentUser, logOutUser, onboardingAuth, suspendUser, checkUsernameAvailability, approvePendingUser, rejectPendingUser, getPendingUsers, revokeModerator, getAllModerators } from "../controller/auth.controller.js";
+import { bannedUser, changeAccountDetails, getCurrentUser, getUserProfileById, logOutUser, onboardingAuth, suspendUser, checkUsernameAvailability, approvePendingUser, rejectPendingUser, getPendingUsers, revokeModerator, getAllModerators, reportUser } from "../controller/auth.controller.js";
 
 const router = Router();
 
@@ -19,11 +19,24 @@ router.get("/google/callback", passport.authenticate("google", {session: false})
       process.env.JWT_SECRET,
       { expiresIn: "7d"},
     )
-    res.redirect(`https://campus-three-black.vercel.app/?token=${token}`)
+
+    res.cookie("accessToken", token, {
+      httpOnly: true,
+      secure: false,
+      sameSite: "lax",
+    });
+
+    const redirectURL =
+      process.env.NODE_ENV === "production"
+        ? "https://campus-three-black.vercel.app"
+        : "http://localhost:5173";
+
+    res.redirect(redirectURL);
   },
 )
 
 router.get("/me", verifyJwt, getCurrentUser)
+router.get("/user/:userId", verifyJwt, getUserProfileById)
 router.get("/check-username", checkUsernameAvailability)
 router.put("/onboarding", verifyJwt, onboardingAuth)
 router.put("/profile", verifyJwt, changeAccountDetails)
@@ -35,5 +48,6 @@ router.put("/reject/:userId", verifyJwt, verifyModerator, rejectPendingUser)
 router.get("/pending-users", verifyJwt, verifyModerator, getPendingUsers)
 router.get("/moderators", verifyJwt, verifyAdmin, getAllModerators)
 router.put("/revoke-moderator/:userId", verifyJwt, verifyAdmin, revokeModerator)
+router.post("/report/:userId", verifyJwt, reportUser)
 
 export default router;

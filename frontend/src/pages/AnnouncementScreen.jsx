@@ -6,6 +6,7 @@ import { AnnouncementSkeleton } from "../components/Skeleton";
 import AnnouncementCard from "../components/AnnouncementCard";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import toast from 'react-hot-toast';
 
 const AnnouncementScreen = ({ onNavClick }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -53,11 +54,16 @@ const AnnouncementScreen = ({ onNavClick }) => {
   };
 
   const handleDelete = async () => {
+    if (!deleteId) return;
+
     try {
       await api.delete(`/announcements/${deleteId}`)
+      queryClient.setQueryData(['announcements'], (old = []) => old.filter((item) => (item?._id || item?.id) !== deleteId));
       queryClient.invalidateQueries({ queryKey: ['announcements'] })
+      toast.success('Announcement deleted successfully');
     } catch (error) {
       console.log("Error while deleting the announcement", error)
+      toast.error(error?.response?.data?.message || 'Failed to delete announcement');
     } finally {
       setDeleteId(null)
     }
@@ -141,6 +147,7 @@ const AnnouncementScreen = ({ onNavClick }) => {
                   currentUserRole={currentUserRole}
                   onStyleType={getTypeStyle}
                   onDelete={setDeleteId}
+                  onUserClick={(userId) => onNavClick(`profile/${userId}`)}
                 />
               ))
             ) : (

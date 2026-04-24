@@ -148,13 +148,24 @@ const AttendanceScreen = ({ onNavClick }) => {
 
   const handleShare = async () => {
     try {
+      const lastFlexStr = localStorage.getItem('lastFlexTime');
+      if (lastFlexStr) {
+        const lastFlexTime = new Date(lastFlexStr).getTime();
+        const twelveHours = 12 * 60 * 60 * 1000;
+        if (Date.now() - lastFlexTime < twelveHours) {
+          showToast('⏳ You can only flex your stats once every 12 hours!');
+          setShareModalOpen(false);
+          return;
+        }
+      }
+
       const grade = getGrade(overall);
       const flexMessage = `My attendance stats: ${overall}% overall across ${subjects.length} subjects! ${grade.label}`;
       const senderName = localStorage.getItem('chatUsername') || "Anonymous";
       
-      // We directly send it via our api or we can use socket, but simplest to tell the backend to send a message
       await api.post('/messages', { content: flexMessage, senderName });
       
+      localStorage.setItem('lastFlexTime', new Date().toISOString());
       showToast('💬 Stats flexed to Global Chat!');
       setTimeout(() => onNavClick('chat'), 1000);
     } catch (err) {

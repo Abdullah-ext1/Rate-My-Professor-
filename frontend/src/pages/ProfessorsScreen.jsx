@@ -256,11 +256,16 @@ const ProfessorsScreen = ({ onNavClick }) => {
       if (!record) return;
       try {
         const canBunkDetails = record.total > 0 && record.percent >= 75 ? `I can bunk ${record.canBunk} more classes!` : "I am in the danger zone! 💀";
-        const flexMsg = `Flexing my Attendance for ${record.subject}! ${canBunkDetails} (Attendance: ${record.percent}%)`;
+        const flexPayload = JSON.stringify({
+          subject: record.subject,
+          percent: record.percent,
+          canBunk: record.canBunk,
+        });
+        const flexMsg = `Flexing my Attendance for ${record.subject}! ${canBunkDetails} (Attendance: ${record.percent}%)\n\n[ATTENDANCE_FLEX]${flexPayload}`;
         const senderName = localStorage.getItem('chatUsername') || "Anonymous";
         await api.post('/messages', { content: flexMsg, senderName });
         showToast(`💬 ${record.subject} flexed to Global Chat!`);
-      } catch (err) {
+      } catch {
         showToast('Failed to share.');
       }
       return;
@@ -464,11 +469,16 @@ const ProfessorsScreen = ({ onNavClick }) => {
     return (
       <ProfessorReviewsScreen
         professor={prof}
-        onBack={() => setSelectedProfessor(null)}
+        onBack={() => {
+          setSelectedProfessor(null);
+          setActiveTab("professors");
+        }}
+        onRate={() => onNavClick('rate-professor', prof)}
         currentUserRole={currentUserRole}
         onDelete={() => {
           handleRemoveProfessor(prof.id);
           setSelectedProfessor(null);
+          setActiveTab("professors");
         }}
       />
     );
@@ -490,7 +500,12 @@ const ProfessorsScreen = ({ onNavClick }) => {
     try {
       const overallResult = totalClasses > 0 ? Math.round((totalAttended / totalClasses) * 100) : 0;
       const gradeLabel = getGrade(overallResult);
-      const flexMessage = `My attendance stats: ${overallResult}% overall across ${attendances.length} subjects! ${gradeLabel.label}`;
+      const overallFlexPayload = JSON.stringify({
+        subject: 'Overall',
+        percent: overallResult,
+        canBunk: overallBunkable,
+      });
+      const flexMessage = `My attendance stats: ${overallResult}% overall across ${attendances.length} subjects! ${gradeLabel.label}\n\n[ATTENDANCE_FLEX]${overallFlexPayload}`;
       const senderName = localStorage.getItem('chatUsername') || "Anonymous";
 
       await api.post('/messages', { content: flexMessage, senderName });
@@ -541,7 +556,7 @@ const ProfessorsScreen = ({ onNavClick }) => {
                 <ProfCardSkeleton />
               </>
             ) : (
-              sortedProfessors.map((prof, idx) => (
+              sortedProfessors.map((prof) => (
                 <ProfCard
                   key={prof.name}
                   initials={prof.initials}

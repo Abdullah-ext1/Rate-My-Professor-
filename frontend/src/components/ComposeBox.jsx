@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import api from '../context/api';
 
 const ComposeBox = ({ onPost }) => {
+  const [isPosting, setIsPosting] = useState(false);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [category, setCategory] = useState('confession');
@@ -11,7 +12,8 @@ const ComposeBox = ({ onPost }) => {
   const [isLoadingFlex, setIsLoadingFlex] = useState(false);
   const [selectedFlex, setSelectedFlex] = useState(null);
 
-  const handlePost = () => {
+  const handlePost = async () => {
+    if (isPosting) return;
     let finalContent = content;
     if (selectedFlex) {
       finalContent = `${content}\n\n[ATTENDANCE_FLEX]${JSON.stringify({
@@ -22,7 +24,12 @@ const ComposeBox = ({ onPost }) => {
     }
     
     if (finalContent.trim() || title.trim()) {
-      onPost(title, finalContent, category);
+      try {
+        setIsPosting(true);
+        await onPost(title, finalContent, category);
+      } finally {
+        setIsPosting(false);
+      }
       setTitle('');
       setContent('');
       setIsExpanded(false);
@@ -162,10 +169,11 @@ const ComposeBox = ({ onPost }) => {
                 Cancel
               </button>
               <button 
-                onClick={handlePost} 
-                className="bg-primary text-white rounded-2xl px-4 py-1.5 text-xs font-semibold cursor-pointer hover:bg-primary-dark transition-colors"
+                onClick={handlePost}
+                disabled={isPosting}
+                className={`bg-primary text-white rounded-2xl px-4 py-1.5 text-xs font-semibold cursor-pointer hover:bg-primary-dark transition-colors ${isPosting ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
-                Post
+                {isPosting ? 'Posting...' : 'Post'}
               </button>
             </div>
           </div>

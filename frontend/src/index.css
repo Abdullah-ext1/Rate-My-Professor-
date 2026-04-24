@@ -17,3 +17,21 @@ body {
 h1, h2, h3, .logo {
   font-family: 'Syne', sans-serif;
 }
+
+/* Hide scrollbar globally but keep scroll functionality */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Global scrollbar hide safety net */
+*::-webkit-scrollbar {
+  display: none;
+}
+* {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

@@ -1,6 +1,13 @@
-import React from 'react';
+import { timeAgo } from '../utils/timeAgo';
 
-const AnnouncementCard = ({ announcement, currentUserRole, onStyleType, onDelete }) => (
+const AnnouncementCard = ({ announcement, currentUserRole, onStyleType, onDelete, onUserClick }) => {
+  const ownerId = typeof announcement.owner === 'string'
+    ? announcement.owner
+    : announcement.owner?._id;
+
+  const ownerName = announcement.owner?.name || announcement.author || "Admin";
+
+  return (
   <div className="bg-bg2 border border-border rounded-2xl p-4 shadow-sm hover:border-border2 transition-colors">
     <div className="flex justify-between items-start mb-2">
       <span
@@ -9,7 +16,7 @@ const AnnouncementCard = ({ announcement, currentUserRole, onStyleType, onDelete
         {announcement.announcementType || announcement.type}
       </span>
       <span className="text-xs text-text3 font-medium">
-        {announcement.date}
+        {announcement.createdAt ? timeAgo(announcement.createdAt) : 'Just now'}
       </span>
     </div>
     <h3 className="text-sm font-bold text-text mb-1.5">
@@ -21,15 +28,20 @@ const AnnouncementCard = ({ announcement, currentUserRole, onStyleType, onDelete
     <div className="flex justify-between items-center pt-2 border-t border-border">
       <div className="flex items-center gap-2">
         <div className="w-5 h-5 rounded-full bg-primary-mid/20 flex items-center justify-center text-[10px] font-bold text-primary-mid">
-          {announcement.author?.charAt(0) || "A"}
+          {ownerName?.charAt(0) || "A"}
         </div>
         <span className="text-xs font-semibold text-text3">
-          {announcement.author || "Admin"}
+          <span
+            className="hover:text-primary-mid cursor-pointer"
+            onClick={() => ownerId && onUserClick?.(ownerId)}
+          >
+            {ownerName}
+          </span>
         </span>
       </div>
       {(currentUserRole === "admin" || currentUserRole === "moderator") && (
         <button
-          onClick={() => onDelete(announcement.id)}
+          onClick={() => onDelete(announcement._id || announcement.id)}
           className="text-xs text-red-500/70 hover:text-red-500 font-medium"
         >
           Delete
@@ -37,6 +49,7 @@ const AnnouncementCard = ({ announcement, currentUserRole, onStyleType, onDelete
       )}
     </div>
   </div>
-);
+  );
+};
 
 export default AnnouncementCard;

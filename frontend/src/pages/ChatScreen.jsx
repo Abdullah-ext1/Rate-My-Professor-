@@ -5,6 +5,7 @@ import api from '../context/api.js';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import toast from 'react-hot-toast';
 
 const ChatScreen = ({ onNavClick }) => {
   const { user } = useAuth();
@@ -22,7 +23,10 @@ const ChatScreen = ({ onNavClick }) => {
   const [onlineCount, setOnlineCount] = useState(0);
   const socketRef = useRef(null);
   const [input, setInput] = useState('');
+  const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef(null);
+  const inputRef = useRef(null);
+  const [replyingTo, setReplyingTo] = useState(null);
 
   const [username, setUsername] = useState('');
   const [hasEntered, setHasEntered] = useState(false);
@@ -31,7 +35,7 @@ const ChatScreen = ({ onNavClick }) => {
 
   const [activeMessageId, setActiveMessageId] = useState(null);
   
-  const [confirmAction, setConfirmAction] = useState({ isOpen: false, action: null, targetId: null, title: '', message: '', confirmText: '', confirmColor: 'bg-red-500' });
+  const [confirmAction, setConfirmAction] = useState({ isOpen: false, action: null, targetId: null, targetSenderId: null, title: '', message: '', confirmText: '', confirmColor: 'bg-red-500' });
 
   useEffect(() => {
     const savedName = localStorage.getItem('chatUsername');
@@ -143,6 +147,10 @@ const ChatScreen = ({ onNavClick }) => {
       }
     })
 
+    socketRef.current.on('messageDeleted', (deletedId) => {
+      queryClient.setQueryData(['chatMessages'], (old = []) => old.filter((m) => m._id !== deletedId));
+    });
+
     socketRef.current.on('onlineUsers', (users) => {
       console.log('Online users:', users);
       setOnlineCount(users.length)
@@ -155,38 +163,67 @@ const ChatScreen = ({ onNavClick }) => {
 
 
   const handleSend = () => {
+    if (isSending) return;
+    if (!socketRef.current) {
+      toast.error('Not connected to chat server yet. Please wait...');
+      return;
+    }
     if (input.trim()) {
-    socketRef.current.emit('sendMessage', { content: input, senderName: username })
-    setInput('')
+      setIsSending(true);
+      socketRef.current.emit('sendMessage', { 
+        content: input, 
+        senderName: username,
+        replyTo: replyingTo?.id || null 
+      });
+      setInput('');
+      setReplyingTo(null);
+      // Reset sending state after a short delay to prevent rapid double-sends
+      setTimeout(() => setIsSending(false), 500);
     }
   };
 
-  const handleConfirmAction = () => {
-    const { action, targetId } = confirmAction;
-    if (action === 'delete') {
-      queryClient.setQueryData(['chatMessages'], (old = []) => old.filter(m => m._id !== targetId));
-    } else if (action === 'suspend') {
-      alert('Suspended user for 15 days');
-    } else if (action === 'ban') {
-      alert('User permanently banned');
-    } else if (action === 'mod') {
-      queryClient.setQueryData(['chatMessages'], (old = []) => old.map(m => 
-        m._id === targetId 
-          ? {...m, senderDetails: {...(m.senderDetails || {}), role: 'moderator'}}
-          : m
-      ));
-    } else if (action === 'remove_mod') {
-      queryClient.setQueryData(['chatMessages'], (old = []) => old.map(m => 
-        m._id === targetId 
-          ? {...m, senderDetails: {...(m.senderDetails || {}), role: 'user'}}
-          : m
-      ));
+  const handleConfirmAction = async () => {
+    const { action, targetId, targetSenderId } = confirmAction;
+    try {
+      if (action === 'delete') {
+        await api.delete(`/messages/${targetId}`, { withCredentials: true });
+        queryClient.setQueryData(['chatMessages'], (old = []) => old.filter(m => m._id !== targetId));
+        toast.success('Message deleted');
+      } else if (action === 'suspend') {
+        await api.post(`/messages/${targetId}/suspend`, {}, { withCredentials: true });
+        toast.success('User suspended for 14 days');
+      } else if (action === 'ban') {
+        await api.post(`/messages/${targetId}/ban`, {}, { withCredentials: true });
+        toast.success('User permanently banned');
+      } else if (action === 'mod') {
+        await api.post(`/messages/${targetId}/promote-moderator`, {}, { withCredentials: true });
+        toast.success('User promoted to moderator');
+        queryClient.setQueryData(['chatMessages'], (old = []) => old.map(m =>
+          ((m.sender?._id || m.sender) === targetSenderId)
+            ? { ...m, sender: { ...m.sender, role: 'moderator' } }
+            : m
+        ));
+      } else if (action === 'remove_mod') {
+        await api.post(`/messages/${targetId}/demote-moderator`, {}, { withCredentials: true });
+        toast.success('Moderator role removed');
+        queryClient.setQueryData(['chatMessages'], (old = []) => old.map(m =>
+          ((m.sender?._id || m.sender) === targetSenderId)
+            ? { ...m, sender: { ...m.sender, role: 'user' } }
+            : m
+        ));
+      } else if (action === 'report') {
+        await api.post(`/messages/${targetId}/report`, {}, { withCredentials: true });
+        toast.success('Message reported to moderators');
+      }
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Action failed');
     }
+    setConfirmAction((prev) => ({ ...prev, isOpen: false }));
     setActiveMessageId(null);
   };
 
-  const openConfirm = (action, targetId, title, message, confirmText, confirmColor = 'bg-red-500') => {
-    setConfirmAction({ isOpen: true, action, targetId, title, message, confirmText, confirmColor });
+  const openConfirm = (action, targetId, title, message, confirmText, confirmColor = 'bg-red-500', targetSenderId = null) => {
+    setConfirmAction({ isOpen: true, action, targetId, targetSenderId, title, message, confirmText, confirmColor });
   };
 
   const getActionTitle = (type) => {
@@ -196,6 +233,7 @@ const ChatScreen = ({ onNavClick }) => {
       case 'mod': return 'Make Moderator';
       case 'remove_mod': return 'Remove Moderator Role';
       case 'ban': return 'Ban User';
+      case 'report': return 'Report Message';
       default: return 'Confirm Action';
     }
   };
@@ -207,17 +245,28 @@ const ChatScreen = ({ onNavClick }) => {
       case 'mod': return 'Are you sure you want to promote this user to Moderator? They will have additional permissions.';
       case 'remove_mod': return 'Are you sure you want to remove this user\'s Moderator privileges? They will return to a standard user role.';
       case 'ban': return 'Are you sure you want to permanently ban this user? This action cannot be undone.';
+      case 'report': return 'Are you sure you want to report this message? Moderators will be notified.';
       default: return 'Are you sure you want to proceed?';
     }
   };
 
-  const openConfirmModal = (actionType, messageId) => {
+  const openConfirmModal = (actionType, messageId, senderId) => {
     const title = getActionTitle(actionType);
     const message = getActionMessage(actionType);
     const confirmText = actionType === 'delete' ? 'Delete' : actionType === 'suspend' ? 'Suspend' : actionType === 'ban' ? 'Ban User' : 'Confirm';
     const confirmColor = actionType === 'delete' ? 'bg-red-500' : actionType === 'suspend' ? 'bg-accent-amber' : 'bg-primary';
 
-    setConfirmAction({ isOpen: true, action: actionType, targetId: messageId, title, message, confirmText, confirmColor });
+    setConfirmAction({ isOpen: true, action: actionType, targetId: messageId, targetSenderId: senderId, title, message, confirmText, confirmColor });
+  };
+
+  // Helper to check if current message is from the same sender as previous
+  const isSameSenderAsPrev = (index) => {
+    if (index === 0) return false;
+    const prevMsg = messages[index - 1];
+    const currMsg = messages[index];
+    const prevSenderId = prevMsg.sender?._id || (typeof prevMsg.sender === 'string' ? prevMsg.sender : null);
+    const currSenderId = currMsg.sender?._id || (typeof currMsg.sender === 'string' ? currMsg.sender : null);
+    return prevSenderId && currSenderId && prevSenderId === currSenderId;
   };
 
   return (
@@ -271,41 +320,89 @@ const ChatScreen = ({ onNavClick }) => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-3.5 py-3 flex flex-col gap-2.5 scrollbar-hide bg-bg pt-16 pb-20">
+      <div className="flex-1 overflow-y-auto px-3.5 py-3 flex flex-col scrollbar-hide bg-bg pt-16 pb-20">
         <div className="flex items-center gap-2 my-1.5">
           <div className="flex-1 h-px bg-border"></div>
           <span className="text-xs text-text3 px-2">Today</span>
           <div className="flex-1 h-px bg-border"></div>
         </div>
 
-        {messages.map(msg => (
-          <div key={msg._id} className={`flex gap-2 ${msg.sender._id === user?._id ? 'flex-row-reverse' : ''}`}>
-            <div className="w-7 h-7 rounded-2 bg-opacity-25 bg-primary flex items-center justify-center text-xs font-semibold text-primary-mid flex-shrink-0 font-syne">
-              {msg.sender._id === user?._id ? 'ME' : msg.sender.name?.substring(0, 2).toUpperCase() || 'U'}
-            </div>
-            <div className={`flex-1 flex flex-col relative ${msg.sender._id === user?._id ? 'items-end' : 'items-start'}`}>
-              <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => setActiveMessageId(activeMessageId === msg._id ? null : msg._id)}>
-                <span className="text-xs font-medium text-text2">{msg.senderName && msg.senderName !== 'Anonymous' ? msg.senderName : (msg.sender._id === user?._id ? (username || 'you') : 'Anonymous')}</span>
-                <span className="text-xs px-1.5 py-0.5 rounded-lg border border-opacity-30 border-primary bg-opacity-10 bg-primary text-primary-mid font-medium">{msg.sender._id === user?._id ? 'rizvi' : 'rizvi'}</span>
-                <span className="text-xs text-text3">{new Date(msg.createdAt).toLocaleTimeString()}</span>
-                {msg.sender._id !== user?._id && (user?.role === 'admin' || user?.role === 'moderator') && (
-                   <span className="text-text3 text-xs ml-1 px-1 hover:text-text transition-colors">•••</span>
-                )}
+        {messages.map((msg, index) => {
+          const senderId = msg.sender?._id || (typeof msg.sender === 'string' ? msg.sender : null);
+          const senderName = msg.sender?.name;
+          const senderRole = msg.sender?.role;
+          const isOwnMessage = senderId === user?._id;
+          const sameSender = isSameSenderAsPrev(index);
+
+          return (
+          <div key={msg._id} className={`flex ${isOwnMessage ? 'flex-row-reverse' : ''} ${sameSender ? 'mt-0.5' : 'mt-2.5'}`}>
+            {/* Avatar — hide for consecutive same-sender messages */}
+            {sameSender ? (
+              <div className="w-7 flex-shrink-0" />
+            ) : (
+              <div className="w-7 h-7 rounded-full bg-opacity-25 bg-primary flex items-center justify-center text-[10px] font-bold text-primary-mid flex-shrink-0 font-syne">
+                {isOwnMessage ? 'ME' : senderName?.substring(0, 2).toUpperCase() || 'U'}
               </div>
-              <div className={`text-xs mt-1.5 px-3 py-2 rounded-2.5 ${msg.sender._id === user?._id ? 'bg-opacity-15 bg-primary border border-opacity-30 border-primary text-text' : 'bg-bg2 border border-border text-text'}`}>
+            )}
+            <div className={`flex flex-col relative ${isOwnMessage ? 'items-end mr-1.5' : 'items-start ml-1.5'} ${isOwnMessage ? 'max-w-[75%]' : 'max-w-[75%]'}`}>
+              {/* Name/meta — hide for consecutive same-sender messages */}
+              {!sameSender && (
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <span
+                    className={`text-xs font-medium text-text2 ${user?.role === 'admin' ? 'hover:text-primary-mid cursor-pointer' : ''}`}
+                    onClick={() => user?.role === 'admin' && senderId && onNavClick(`profile/${senderId}`)}
+                  >
+                    {msg.senderName && msg.senderName !== 'Anonymous' ? msg.senderName : (isOwnMessage ? (username || 'you') : 'Anonymous')}
+                  </span>
+                  {(senderRole === 'admin' || senderRole === 'moderator') && (
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded-md border border-opacity-30 uppercase font-bold tracking-wide
+                      ${senderRole === 'admin' ? 'border-red-500 bg-red-500/10 text-red-400' : 'border-blue-500 bg-blue-500/10 text-blue-400'}`}
+                    >
+                      {senderRole}
+                    </span>
+                  )}
+                  <span className="text-xs text-text3">{new Date(msg.createdAt).toLocaleTimeString()}</span>
+                  <button
+                    onClick={() => setActiveMessageId(activeMessageId === msg._id ? null : msg._id)}
+                    className="text-text3 text-xs ml-1 px-1 hover:text-text transition-colors"
+                  >
+                    •••
+                  </button>
+                </div>
+              )}
+              <div className={`text-xs px-3 py-2 rounded-2xl ${isOwnMessage ? 'bg-opacity-15 bg-primary border border-opacity-30 border-primary text-text rounded-tr-md' : 'bg-bg2 border border-border text-text rounded-tl-md'}`}>
+                {msg.replyTo && (
+                  <div className="mb-1.5 p-2 rounded-lg bg-bg/50 border-l-2 border-primary/50 text-[11px] opacity-80">
+                    <div className="font-semibold text-primary-mid mb-0.5">
+                      {msg.replyTo.senderName || 'Anonymous'}
+                    </div>
+                    <div className="truncate text-text3 line-clamp-1">
+                      {msg.replyTo.content?.includes('attendance') ? 'Attendance Flex Stats' : msg.replyTo.content}
+                    </div>
+                  </div>
+                )}
                 {(() => {
-                  if (msg.content?.includes('attendance') || msg.content?.includes('Attendance')) {
+                  if (msg.content?.includes('attendance') || msg.content?.includes('Attendance') || msg.content?.includes('[ATTENDANCE_FLEX]')) {
                     let cleanContent = msg.content;
                     let displayStats = "Stats shared";
-                    
-                    const percentMatch = cleanContent.match(/\(Attendance: (.*?)\)/);
-                    if (percentMatch) {
-                      displayStats = `Attendance: ${percentMatch[1]}`;
-                      cleanContent = cleanContent.replace(percentMatch[0], '').trim();
-                    } else {
-                      const overallMatch = cleanContent.match(/stats: (\d+%) overall/);
-                      if (overallMatch) {
-                        displayStats = `Overall: ${overallMatch[1]}`;
+
+                    if (cleanContent.includes('[ATTENDANCE_FLEX]')) {
+                      const [textPart, jsonPart] = cleanContent.split('[ATTENDANCE_FLEX]');
+                      cleanContent = textPart.trim();
+                      try {
+                        const flexData = JSON.parse(jsonPart || '{}');
+                        if (typeof flexData.percent === 'number') {
+                          displayStats = `${flexData.subject || 'Attendance'}: ${flexData.percent}%`;
+                        }
+                      } catch {
+                        // Fallback to regex parsing below
+                      }
+                    }
+
+                    if (displayStats === 'Stats shared') {
+                      const percentMatch = cleanContent.match(/(\d{1,3})%/);
+                      if (percentMatch) {
+                        displayStats = `Attendance: ${percentMatch[1]}%`;
                       }
                     }
 
@@ -329,29 +426,62 @@ const ChatScreen = ({ onNavClick }) => {
               </div>
 
               {/* Moderation Dropdown */}
-              {activeMessageId === msg._id && msg.sender._id !== user?._id && (user?.role === 'admin' || user?.role === 'moderator') && (
+              {activeMessageId === msg._id && (
                 <div className="absolute top-6 left-0 z-50 bg-bg2 border border-border rounded-xl shadow-lg p-1 w-40 flex flex-col gap-1">
                    <button 
-                     onClick={() => openConfirm('delete', msg._id, "Delete Message", "Are you sure you want to delete this message?", "Delete")}
-                     className="text-left px-3 py-2 text-xs font-medium text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                     onClick={() => {
+                       setActiveMessageId(null);
+                       setReplyingTo({
+                         id: msg._id,
+                         senderName: msg.senderName && msg.senderName !== 'Anonymous' ? msg.senderName : (isOwnMessage ? (username || 'you') : 'Anonymous'),
+                         content: msg.content
+                       });
+                       inputRef.current?.focus();
+                     }}
+                     className="text-left px-3 py-2 text-xs font-medium text-text hover:bg-hover rounded-lg transition-colors"
                    >
-                     Delete Message
+                     Reply
                    </button>
-                   {(user?.role === 'admin' || user?.role === 'moderator') && (
+                   {!isOwnMessage && (
                      <button 
-                       onClick={() => openConfirm('suspend', null, "Suspend User", "Are you sure you want to suspend this user for 15 days?", "Suspend", 'bg-accent-amber')}
-                       className="text-left px-3 py-2 text-xs font-medium text-accent-amber hover:bg-accent-amber/10 rounded-lg transition-colors cursor-pointer"
+                       onClick={() => {
+                         setActiveMessageId(null);
+                         openConfirm('report', msg._id, "Report Message", "Are you sure you want to report this message?", "Report", 'bg-red-500', senderId);
+                       }}
+                       className="text-left px-3 py-2 text-xs font-medium text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
                      >
-                       Suspend (15 days)
+                       Report Message
                      </button>
                    )}
-                   {user?.role === 'admin' && msg.senderDetails?.role !== 'admin' && (
+                   {(isOwnMessage || (user?.role === 'admin' || user?.role === 'moderator')) && (
+                     <button 
+                       onClick={() => {
+                         setActiveMessageId(null);
+                         openConfirm('delete', msg._id, "Delete Message", "Are you sure you want to delete this message?", "Delete", 'bg-red-500', senderId);
+                       }}
+                       className="text-left px-3 py-2 text-xs font-medium text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                     >
+                       Delete Message
+                     </button>
+                   )}
+                   {!isOwnMessage && senderId && (user?.role === 'admin' || user?.role === 'moderator') && (
+                     <button 
+                       onClick={() => {
+                         setActiveMessageId(null);
+                         openConfirm('suspend', msg._id, "Suspend User", "Are you sure you want to suspend this user for 14 days?", "Suspend", 'bg-accent-amber', senderId);
+                       }}
+                       className="text-left px-3 py-2 text-xs font-medium text-accent-amber hover:bg-accent-amber/10 rounded-lg transition-colors cursor-pointer"
+                     >
+                       Suspend (14 days)
+                     </button>
+                   )}
+                   {!isOwnMessage && senderId && user?.role === 'admin' && senderRole !== 'admin' && (
                      <>
-                       {msg.senderDetails?.role !== 'moderator' ? (
+                       {senderRole !== 'moderator' ? (
                          <button 
                            onClick={() => {
                              setActiveMessageId(null);
-                             openConfirmModal('mod', msg._id);
+                             openConfirmModal('mod', msg._id, senderId);
                            }}
                            className="w-full text-left px-3 py-1.5 text-xs text-blue-400 hover:bg-hover active:bg-divider transition-colors flex items-center gap-2"
                          >
@@ -364,7 +494,7 @@ const ChatScreen = ({ onNavClick }) => {
                          <button 
                            onClick={() => {
                              setActiveMessageId(null);
-                             openConfirmModal('remove_mod', msg._id);
+                             openConfirmModal('remove_mod', msg._id, senderId);
                            }}
                            className="w-full text-left px-3 py-1.5 text-xs text-orange-400 hover:bg-hover active:bg-divider transition-colors flex items-center gap-2"
                          >
@@ -377,7 +507,10 @@ const ChatScreen = ({ onNavClick }) => {
                          </button>
                        )}
                        <button 
-                         onClick={() => openConfirm('ban', null, "Ban User", "Are you sure you want to permanently ban this user?", "Ban User")}
+                         onClick={() => {
+                           setActiveMessageId(null);
+                           openConfirm('ban', msg._id, "Ban User", "Are you sure you want to permanently ban this user?", "Ban User", 'bg-red-500', senderId);
+                         }}
                          className="text-left px-3 py-2 text-xs font-medium text-red-500 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
                        >
                          Ban User
@@ -388,14 +521,29 @@ const ChatScreen = ({ onNavClick }) => {
               )}
             </div>
           </div>
-        ))}
+        )})}
         <div ref={messagesEndRef} />
       </div>
 
       <div className="fixed bottom-16 left-0 right-0 z-30 bg-bg border-t border-border px-3.5 py-2 flex-shrink-0">
-        <div className="bg-bg2 border border-border2 rounded-3xl px-3 py-2.5 flex items-end gap-2.5">
-          <div className="w-6.5 h-6.5 rounded-2 bg-opacity-30 bg-primary flex items-center justify-center text-xs font-semibold text-primary-mid flex-shrink-0 font-syne">ME</div>
+        {replyingTo && (
+          <div className="flex items-center justify-between bg-bg2 border border-border2 rounded-t-2xl px-4 py-2.5 mb-[-10px] pb-4 shadow-lg shadow-black/10">
+            <div className="flex flex-col overflow-hidden border-l-2 border-primary pl-2">
+              <span className="text-[10px] text-primary-mid font-semibold tracking-wide">Replying to {replyingTo.senderName}</span>
+              <span className="text-xs text-text3 truncate max-w-[250px] mt-0.5">{replyingTo.content?.includes('attendance') ? 'Attendance Flex Stats' : replyingTo.content}</span>
+            </div>
+            <button onClick={() => setReplyingTo(null)} className="text-text3 hover:text-white bg-bg3/50 hover:bg-bg3 p-1.5 rounded-full transition-colors ml-2">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="12" height="12">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+        )}
+        <div className={`bg-bg2 border border-border2 rounded-3xl px-3 py-2.5 flex items-end gap-2.5 relative z-10 ${replyingTo ? 'rounded-tl-none rounded-tr-none' : ''}`}>
+          <div className="w-6.5 h-6.5 rounded-full bg-opacity-30 bg-primary flex items-center justify-center text-[10px] font-bold text-primary-mid flex-shrink-0 font-syne">ME</div>
           <textarea
+            ref={inputRef}
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={(e) => {
@@ -410,8 +558,8 @@ const ChatScreen = ({ onNavClick }) => {
           />
           <button
             onClick={handleSend}
-            disabled={!input.trim()}
-            className="w-8 h-8 rounded-2 bg-primary flex items-center justify-center cursor-pointer hover:bg-primary-dark transition-colors disabled:opacity-35 disabled:cursor-not-allowed flex-shrink-0"
+            disabled={!input.trim() || isSending}
+            className="w-8 h-8 rounded-full bg-primary flex items-center justify-center cursor-pointer hover:bg-primary-dark transition-colors disabled:opacity-35 disabled:cursor-not-allowed flex-shrink-0"
           >
             <svg viewBox="0 0 16 16" fill="none" stroke="white" strokeWidth="1.5" width="14" height="14">
               <path d="M14 2L2 8l4 2 2 4 6-12z" />

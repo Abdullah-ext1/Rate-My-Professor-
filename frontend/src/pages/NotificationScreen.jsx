@@ -1,13 +1,15 @@
-import { useCallback, useMemo, useRef } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { NotificationSkeleton } from '../components/Skeleton';
 import api from '../context/api.js';
 import { timeAgo } from '../utils/timeAgo';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useInfiniteScrollTrigger } from '../utils/useInfiniteScrollTrigger';
+import { enableNotificationSound, isNotificationSoundEnabled, requestSystemNotificationPermission } from '../utils/notificationSound';
+import toast from 'react-hot-toast';
 
 const PAGE_SIZE = 10;
 
-const TopNav = ({ onNavClick }) => (
+const TopNav = ({ onNavClick, alertsEnabled, onEnableAlerts }) => (
   <div className="fixed top-0 left-0 right-0 bg-bg px-4 py-2.5 flex items-center gap-3 flex-shrink-0 border-b border-border z-30">
     <button onClick={() => onNavClick('feed')} className="w-8 h-8 rounded-full bg-bg2 flex items-center justify-center cursor-pointer hover:bg-bg3 transition-colors">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E2E1EC" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -15,6 +17,16 @@ const TopNav = ({ onNavClick }) => (
       </svg>
     </button>
     <div className="text-base font-bold text-text">Notifications</div>
+    <button
+      onClick={onEnableAlerts}
+      className={`ml-auto text-[10px] px-2.5 py-1 rounded-full border transition-colors ${
+        alertsEnabled
+          ? 'bg-primary/15 border-primary/30 text-primary-mid'
+          : 'bg-bg2 border-border text-text3 hover:text-text'
+      }`}
+    >
+      {alertsEnabled ? 'Alerts On' : 'Enable Alerts'}
+    </button>
   </div>
 );
 
@@ -61,6 +73,15 @@ const NotificationItem = ({ type, senderId, content, createdAt, isRead, postId, 
         </div>
       );
     }
+
+    return (
+      <div className="w-8 h-8 rounded-full bg-opacity-15 bg-primary flex items-center justify-center text-primary-mid flex-shrink-0">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+          <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+        </svg>
+      </div>
+    );
   };
 
   return (
@@ -75,12 +96,18 @@ const NotificationItem = ({ type, senderId, content, createdAt, isRead, postId, 
       {getIcon()}
       <div className="flex-1">
         <div className="text-sm text-text mb-1">
-          {type === 'like' && <><span className="font-bold">{senderId?.name || "Someone"}</span> liked your post.</>}
+          {type === 'like' && (
+            <>
+              <span className="font-bold">{senderId?.name || "Someone"}</span>{' '}
+              {content?.toLowerCase().includes('review') ? 'found your review helpful.' : 'liked your post.'}
+            </>
+          )}
           {type === 'comment' && <><span className="font-bold">{senderId?.name || "Someone"}</span> commented on your post.</>}
           {type === 'announcement' && <><span className="font-bold">{senderId?.name || "Admin"}</span> posted an announcement.</>}
           {(type === 'pyqApproved' || type === 'pyqRejected') && <span>{content}</span>}
+          {type === 'other' && <span>{content}</span>}
         </div>
-        {type !== 'pyqApproved' && type !== 'pyqRejected' && (
+        {type !== 'pyqApproved' && type !== 'pyqRejected' && type !== 'other' && (
           <div className="text-sm text-text3 line-clamp-1">"{content}"</div>
         )}
         <div className="text-xs text-text3 mt-1.5">{timeAgo(createdAt)}</div>
@@ -91,6 +118,23 @@ const NotificationItem = ({ type, senderId, content, createdAt, isRead, postId, 
 
 const NotificationScreen = ({ onNavClick }) => {
   const loadMoreRef = useRef(null);
+  const [alertsEnabled, setAlertsEnabled] = useState(isNotificationSoundEnabled());
+
+  const handleEnableAlerts = useCallback(async () => {
+    const enabled = await enableNotificationSound();
+    setAlertsEnabled(enabled);
+
+    if (enabled) {
+      const notificationGranted = await requestSystemNotificationPermission();
+      if (notificationGranted) {
+        toast.success('Alerts enabled (sound + system notifications)');
+      } else {
+        toast.success('Sound alerts enabled');
+      }
+    } else {
+      toast('Alerts disabled');
+    }
+  }, []);
 
   const {
     data,
@@ -135,7 +179,7 @@ const NotificationScreen = ({ onNavClick }) => {
 
   return (
     <div className="flex flex-col h-full bg-bg">
-      <TopNav onNavClick={onNavClick} />
+  <TopNav onNavClick={onNavClick} alertsEnabled={alertsEnabled} onEnableAlerts={handleEnableAlerts} />
       <div className="flex-1 overflow-y-auto pt-[60px] pb-6">
         <div className="flex flex-col">
           {isLoading ? (

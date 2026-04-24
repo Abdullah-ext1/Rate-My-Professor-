@@ -8,6 +8,7 @@ export default function configurePassport() {
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     callbackURL: process.env.CALLBACK_URL,
   }, async (accessToken, refreshToken, profile, done) => {
+    console.log("Callback URL:", process.env. CALLBACK_URL)
     try {
       const existingUser = await User.findOne({ googleId: profile.id });
       if(existingUser){

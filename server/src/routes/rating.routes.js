@@ -4,7 +4,8 @@ import { verifyJwt } from "../middlewares/verifyJwt.js";
 import {
    addRating,
     getRatings,
-     deleteRating
+      deleteRating,
+      voteOnRating
 } from "../controller/rating.controller.js";
 
 const router = Router()
@@ -12,5 +13,6 @@ const router = Router()
 router.route("/:professorId").post(verifyJwt , addRating)
 router.route("/:professorId").get(verifyJwt , getRatings)
 router.route("/:ratingId").delete(verifyJwt , deleteRating)
+   router.route("/vote/:ratingId").patch(verifyJwt, voteOnRating)
 
 export default router

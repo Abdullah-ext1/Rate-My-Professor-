@@ -25,9 +25,6 @@ export const AuthProvider = ({ children }) => {
     const token = params.get('token');
     
     if (token) {
-      localStorage.setItem('accessToken', token);
-      // Clean up URL
-      window.history.replaceState({}, document.title, window.location.pathname);
       fetchUser();
     } else {
       fetchUser();

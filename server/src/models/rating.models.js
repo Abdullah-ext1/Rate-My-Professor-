@@ -17,9 +17,29 @@ const ratingSchema = new Schema({
     min: 1,
     max: 5
   },
+  difficulty: {
+    type: Number,
+    min: 1,
+    max: 5,
+    default: 3
+  },
+  tags: {
+    type: [String],
+    default: []
+  },
   comment: {
     type: String,
     default: ''
+  },
+  helpfulVotes: {
+    type: [Schema.Types.ObjectId],
+    ref: 'User',
+    default: []
+  },
+  unhelpfulVotes: {
+    type: [Schema.Types.ObjectId],
+    ref: 'User',
+    default: []
   }
 }, { timestamps: true });
 

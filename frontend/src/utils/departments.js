@@ -3,6 +3,7 @@ export const DEPARTMENTS = [
   { value: "CS", label: "Computer Science" },
   { value: "IT", label: "Information Technology" },
   { value: "EXTC", label: "Electronics & Telecommunication" },
+  { value: "ECS", label: "Electronics & Computer Science" },
   { value: "AIDS", label: "AI & Data Science (AIDS)" },
   { value: "AIML", label: "AI & Machine Learning (AIML)" },
   { value: "MECH", label: "Mechanical Engineering" },

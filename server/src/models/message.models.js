@@ -10,9 +10,15 @@ const messageSchema = new Schema({
         type: Schema.Types.ObjectId,
         ref: "College",
     },
-    senderName: { type: String, default: 'Anonymous' }, content: {
+    senderName: { type: String, default: 'Anonymous' },
+    content: {
         type: String,
         required: true,
+    },
+    replyTo: {
+        type: Schema.Types.ObjectId,
+        ref: "Message",
+        default: null,
     },
 }, { timestamps: true });
 

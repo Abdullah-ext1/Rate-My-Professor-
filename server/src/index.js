@@ -3,6 +3,7 @@ import { Server } from 'socket.io'
 import app from './app.js'
 import { connectDb } from "./db/db.connection.js"
 import { initChat } from './socket/chat.socket.js'
+import { setIo } from './socket/io.store.js'
 
 connectDb()
 .then(() => {
@@ -16,6 +17,7 @@ connectDb()
 })
 
   app.set('io', io)
+    setIo(io)
 
   initChat(io)
 

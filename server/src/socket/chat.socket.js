@@ -7,6 +7,7 @@ export function initChat(io) {
   io.use(socketAuth)
   io.on("connection", (socket) => {
     console.log("user connected:", socket.id, "user:", socket.user.name)
+    socket.join(`user:${socket.user._id.toString()}`)
 
     onlineUsers.push({
       name: socket.user.name,
@@ -25,7 +26,7 @@ export function initChat(io) {
           content: data.content, 
           senderName: data.senderName || 'Anonymous',
         })
-        const populatedMessage = await message.populate("sender", "name avatar _id")
+  const populatedMessage = await message.populate("sender", "name avatar role username _id")
         io.emit("message", populatedMessage)
       } catch (error) {
         console.error("Error sending message:", error)

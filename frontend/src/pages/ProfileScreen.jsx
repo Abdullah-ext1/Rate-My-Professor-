@@ -26,12 +26,14 @@ const EditProfileModal = ({ isOpen, onClose, user, onUpdate }) => {
         year
       });
       // The frontend should update its state and close the modal regardless of 'success' nesting if it reaches here okay.
-      // Easiest reliable way to ensure a full refresh as requested:
       onUpdate(response.data?.data || response.data);
+      toast.success('Profile updated successfully!');
       onClose();
-      window.location.reload();
     } catch (err) {
-      console.log("Error while changing the details", error)
+      const msg = err?.response?.data?.message || 'Failed to update profile';
+      setError(msg);
+      toast.error(msg);
+      console.log("Error while changing the details", err);
     } finally {
       setIsSubmitting(false);
     }
@@ -134,9 +136,17 @@ const EditProfileModal = ({ isOpen, onClose, user, onUpdate }) => {
   );
 };
 
+const getInitials = (name) => {
+  if (!name) return '?';
+  const parts = name.trim().split(' ');
+  if (parts.length > 1) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  return parts[0].substring(0, 2).toUpperCase();
+};
+
 const ProfileScreen = ({ onNavClick, currentUserRole }) => {
   const {user, setUser} = useAuth();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
   
   // Try to use the globally captured deferred prompt first
   const [deferredPrompt, setDeferredPrompt] = useState(window._deferredPrompt || null);
@@ -203,6 +213,8 @@ const ProfileScreen = ({ onNavClick, currentUserRole }) => {
     toast('Install prompt is not available yet. Reload once, then try again in Chrome/Edge.');
   };
 
+  const showInitials = !user?.avatar || avatarError;
+
   return (
     <div className="flex flex-col flex-1 overflow-hidden bg-bg relative min-h-screen">
       {/* Top Navbar */}
@@ -229,7 +241,15 @@ const ProfileScreen = ({ onNavClick, currentUserRole }) => {
         {/* Profile Header */}
         <div className="flex flex-col items-center justify-center py-6 border-b border-border mb-6">
           <div className="w-24 h-24 rounded-full bg-primary-mid/10 border-4 border-bg2 outline outline-2 outline-primary-mid/30 flex items-center justify-center mb-4 shadow-lg overflow-hidden relative group cursor-pointer">
-            <img src={user?.avatar} className="w-full h-full object-cover rounded-full" />
+            {showInitials ? (
+              <span className="text-2xl font-bold text-primary-mid font-syne">{getInitials(user?.name)}</span>
+            ) : (
+              <img 
+                src={user?.avatar} 
+                className="w-full h-full object-cover rounded-full" 
+                onError={() => setAvatarError(true)}
+              />
+            )}
             <div className="absolute inset-0 bg-black/40 hidden group-hover:flex items-center justify-center transition-all">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
@@ -360,26 +380,19 @@ const ProfileScreen = ({ onNavClick, currentUserRole }) => {
         <div className="my-8 flex flex-col items-center justify-center pt-6 border-t border-border/40">
           <motion.div 
             whileHover={{ scale: 1.05 }}
-            className="text-xs font-medium text-text3 tracking-wide flex items-center justify-center gap-1.5 bg-bg2 px-4 py-2 rounded-full border border-border/80 shadow-sm"
+            className="text-[11px] font-medium text-text3 tracking-wide flex items-center justify-center gap-1 bg-bg2 px-4 py-2 rounded-full border border-border/80 shadow-sm text-center flex-wrap"
           >
-            Made with <span className="text-red-500 animate-pulse text-sm px-0.5">❤</span> by{' '}
-            <a 
-              href="https://www.linkedin.com/in/ammarfrfr/" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-primary-mid font-bold hover:underline"
-            >
-              Ammar
-            </a>
+            <span>Made with <span className="text-red-500 animate-pulse px-0.5">❤</span> by{' '}
+            <a href="https://www.linkedin.com/in/ammarfrfr/" target="_blank" rel="noopener noreferrer" className="text-primary-mid font-bold hover:underline">Ammar</a>
             {' '}&{' '}
-            <a 
-              href="https://www.linkedin.com/in/abdullah-khan-6747252b5/" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-primary-mid font-bold hover:underline"
-            >
-              Abdullah
-            </a>
+            <a href="https://www.linkedin.com/in/abdullah-khan-6747252b5/" target="_blank" rel="noopener noreferrer" className="text-primary-mid font-bold hover:underline">Abdullah</a>
+            </span>
+            <span className="hidden sm:inline"> | </span>
+            <span>Marketed by{' '}
+            <a href="https://www.linkedin.com/in/arfat-naik/" target="_blank" rel="noopener noreferrer" className="text-primary-mid font-bold hover:underline">Arfat</a>
+            {' '}&{' '}
+            <a href="https://www.linkedin.com/in/mohammedzaidshaikh10/" target="_blank" rel="noopener noreferrer" className="text-primary-mid font-bold hover:underline">Zaid</a>
+            </span>
           </motion.div>
         </div>
 

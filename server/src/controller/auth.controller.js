@@ -61,6 +61,20 @@ const onboardingAuth = asyncHandler( async(req, res) => {
     ? "Onboarding completed successfully! Welcome to your college community." 
     : "Onboarding completed. Your account is pending moderator approval."
 
+  if (!domainMatches) {
+    import('./notification.controller.js').then(async ({ createNotification }) => {
+      const adminsAndMods = await User.find({ role: { $in: ['admin', 'moderator'] }, college });
+      adminsAndMods.forEach(admin => {
+        createNotification({
+          userId: admin._id,
+          senderId: req.user._id,
+          type: 'other',
+          content: `New user ${username} wants to join ${collegeFetch.name} and is pending approval.`
+        });
+      });
+    }).catch(err => console.error("Failed to notify admins", err));
+  }
+
   return res
   .status(201)
   .json(
@@ -125,6 +139,43 @@ const getCurrentUser = asyncHandler(async (req, res) => {
   .json(
     new ApiResponse(200, user, "User has been fetched successfully")
   )
+})
+
+const getUserProfileById = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+
+  if (!userId) {
+    throw new ApiError(400, "User ID is required");
+  }
+
+  const profileUser = await User.findById(userId)
+    .select("name username avatar department year role college createdAt")
+    .populate('college', 'name')
+    .lean();
+
+  if (!profileUser) {
+    throw new ApiError(404, "User not found");
+  }
+
+  const postsCount = await Post.countDocuments({ owner: profileUser._id });
+  const repliesCount = await Comment.countDocuments({ user: profileUser._id });
+
+  const posts = await Post.find({ owner: profileUser._id }).select("likes");
+  const totalPostLikes = posts.reduce((acc, p) => acc + (p.likes ? p.likes.length : 0), 0);
+
+  const comments = await Comment.find({ user: profileUser._id }).select("commentLike");
+  const totalCommentLikes = comments.reduce((acc, c) => acc + (c.commentLike ? c.commentLike.length : 0), 0);
+
+  const userProfile = {
+    ...profileUser,
+    postsCount,
+    repliesCount,
+    karma: totalPostLikes + totalCommentLikes,
+  };
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, userProfile, "User profile fetched successfully"));
 })
 
 const logOutUser = asyncHandler(async (req, res) => {
@@ -301,10 +352,39 @@ const revokeModerator = asyncHandler(async (req, res) => {
   );
 })
 
+const reportUser = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+
+  if (userId.toString() === req.user._id.toString()) {
+    throw new ApiError(400, "You cannot report yourself");
+  }
+
+  const reportedUser = await User.findById(userId);
+  if (!reportedUser) {
+    throw new ApiError(404, "User not found");
+  }
+
+  const adminsAndMods = await User.find({ role: { $in: ['admin', 'moderator'] } });
+  
+  import('./notification.controller.js').then(({ createNotification }) => {
+    adminsAndMods.forEach(admin => {
+      createNotification({
+        userId: admin._id,
+        senderId: req.user._id,
+        type: 'other',
+        content: `User @${reportedUser.username} (${reportedUser.name}) was reported by another user.`
+      });
+    });
+  });
+
+  return res.status(200).json(new ApiResponse(200, null, "User reported successfully"));
+});
+
 export {
   onboardingAuth,
   changeAccountDetails,
   getCurrentUser,
+  getUserProfileById,
   logOutUser,
   bannedUser,
   suspendUser,
@@ -313,5 +393,6 @@ export {
   rejectPendingUser,
   getPendingUsers,
   revokeModerator,
-  getAllModerators
+  getAllModerators,
+  reportUser
 }

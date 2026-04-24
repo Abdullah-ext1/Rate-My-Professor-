@@ -54,6 +54,7 @@ const RateProfessorScreen = ({ onNavClick }) => {
   const [difficulty, setDifficulty] = useState(3);
   const [selectedTags, setSelectedTags] = useState([]);
   const [review, setReview] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const location = useLocation();
   const professor = location.state?.professor;
 
@@ -69,9 +70,16 @@ const RateProfessorScreen = ({ onNavClick }) => {
   ];
 
   const handleTagToggle = (tag) => {
-    setSelectedTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
-    );
+    setSelectedTags((prev) => {
+      if (prev.includes(tag)) {
+        return prev.filter((t) => t !== tag);
+      }
+      if (prev.length >= 3) {
+        toast.error('You can select up to 3 tags');
+        return prev;
+      }
+      return [...prev, tag];
+    });
   };
 
   const handleToggleStar = (val) => {
@@ -81,14 +89,23 @@ const RateProfessorScreen = ({ onNavClick }) => {
   const [errorMsg, setErrorMsg] = useState("");
 
   const handleSubmit = async () => {
+    if (isSubmitting) return;
+
+    if (!professor?.id || typeof professor.id !== 'string') {
+      setErrorMsg("Professor context missing. Please open rating from the professor page.");
+      return;
+    }
+
     if (rating > 0 && review.trim().length > 0) {
       try {
+        setIsSubmitting(true);
         setErrorMsg("");
         await api.post(
           `/ratings/${professor.id}`,
           {
             rating,
             comment: review,
+            difficulty: Number(difficulty),
             tags: selectedTags,
           },
         );
@@ -98,7 +115,11 @@ const RateProfessorScreen = ({ onNavClick }) => {
         onNavClick("professors");
       } catch (error) {
         console.error("Error submitting rating:", error);
-        setErrorMsg(error?.response?.data?.message || "Error submitting review");
+        const serverMessage = error?.response?.data?.message;
+        setErrorMsg(serverMessage || "Error submitting review");
+        toast.error(serverMessage || "Error submitting review");
+      } finally {
+        setIsSubmitting(false);
       }
     }
   };
@@ -199,13 +220,14 @@ const RateProfessorScreen = ({ onNavClick }) => {
         {/* Submit */}
         <button
           onClick={handleSubmit}
+          disabled={isSubmitting}
           className={`w-full py-3.5 rounded-full font-bold text-sm transition-colors ${
-            rating > 0 && review.trim().length > 0
+            professor?.id && rating > 0 && review.trim().length > 0 && !isSubmitting
               ? "bg-primary text-white cursor-pointer hover:bg-primary-dark shadow-md shadow-primary/20"
               : "bg-bg3 border border-border text-text3 cursor-not-allowed"
           }`}
         >
-          Submit Rating
+          {isSubmitting ? "Submitting..." : "Submit Rating"}
         </button>
       </div>
     </div>

@@ -1,8 +1,15 @@
 import React from 'react';
 
-const AttendanceFlexCard = ({ subjects = [], username = 'Anonymous', compact = false }) => {
-  const overall = subjects.length > 0
-    ? Math.round(subjects.reduce((acc, s) => acc + ((s.present || 0) / (s.total || 1)) * 100, 0) / subjects.length)
+const AttendanceFlexCard = ({ subjects = [], compact = false }) => {
+  const normalizedSubjects = subjects.map((s) => ({
+    present: Number(s.present ?? s.attended ?? 0),
+    total: Number(s.total ?? 0),
+    name: s.name ?? s.subject ?? 'Subject',
+    _id: s._id,
+  }));
+
+  const overall = normalizedSubjects.length > 0
+    ? Math.round(normalizedSubjects.reduce((acc, s) => acc + (s.total > 0 ? (s.present / s.total) * 100 : 0), 0) / normalizedSubjects.length)
     : 0;
 
   const getGrade = (p) => {
@@ -58,7 +65,7 @@ const AttendanceFlexCard = ({ subjects = [], username = 'Anonymous', compact = f
           <div className="flex flex-col gap-0.5 min-w-0">
             <span className="text-[10px] text-text3 font-medium uppercase tracking-wider">Attendance Flex</span>
             <span className="text-xs font-semibold" style={{ color: grade.color }}>{grade.label}</span>
-            <span className="text-[10px] text-text3">{subjects.length} subjects tracked</span>
+            <span className="text-[10px] text-text3">{normalizedSubjects.length} subjects tracked</span>
           </div>
         </div>
       </div>
@@ -82,7 +89,7 @@ const AttendanceFlexCard = ({ subjects = [], username = 'Anonymous', compact = f
           </svg>
         </div>
         <span className="text-[11px] font-semibold text-primary-mid uppercase tracking-widest">Attendance Flex</span>
-        <span className="ml-auto text-[10px] text-text3 bg-bg3/50 px-2 py-0.5 rounded-full border border-border">📚 {subjects.length} subjects</span>
+  <span className="ml-auto text-[10px] text-text3 bg-bg3/50 px-2 py-0.5 rounded-full border border-border">📚 {normalizedSubjects.length} subjects</span>
       </div>
 
       {/* Center ring + grade */}
@@ -120,8 +127,8 @@ const AttendanceFlexCard = ({ subjects = [], username = 'Anonymous', compact = f
 
       {/* Subject bars */}
       <div className="relative z-10 flex flex-col gap-2">
-        {subjects.slice(0, 5).map((sub, i) => {
-          const perc = Math.round(((sub.present || 0) / (sub.total || 1)) * 100);
+        {normalizedSubjects.slice(0, 5).map((sub, i) => {
+          const perc = sub.total > 0 ? Math.round((sub.present / sub.total) * 100) : 0;
           const barColor = getBarColor(perc);
           return (
             <div key={sub._id || i} className="flex items-center gap-2.5">
@@ -136,8 +143,8 @@ const AttendanceFlexCard = ({ subjects = [], username = 'Anonymous', compact = f
             </div>
           );
         })}
-        {subjects.length > 5 && (
-          <span className="text-[10px] text-text3 text-center mt-1">+{subjects.length - 5} more subjects</span>
+        {normalizedSubjects.length > 5 && (
+          <span className="text-[10px] text-text3 text-center mt-1">+{normalizedSubjects.length - 5} more subjects</span>
         )}
       </div>
     </div>
