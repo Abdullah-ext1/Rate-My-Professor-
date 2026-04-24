@@ -361,6 +361,7 @@ const ProfileScreen = ({ onNavClick, currentUserRole }) => {
             onClick={async () => {
               await api.post('/auth/logout');
               localStorage.removeItem('accessToken');
+              localStorage.removeItem('chatUsername');
               window.location.href = '/login';
             }}
             className="flex items-center gap-3 p-4 rounded-2xl hover:bg-red-500/10 transition-colors text-red-500 group cursor-pointer w-full text-left mt-2"

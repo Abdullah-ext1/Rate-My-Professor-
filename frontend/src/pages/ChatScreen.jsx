@@ -107,7 +107,7 @@ const ChatScreen = ({ onNavClick }) => {
     socketRef.current.on('onlineUsers', (users) => setOnlineCount(users.length));
 
     return () => socketRef.current?.disconnect();
-  }, [hasEntered]);
+  }, [user, hasEntered]);
 
   const handleSend = () => {
     if (isSending || !socketRef.current || !input.trim()) return;
