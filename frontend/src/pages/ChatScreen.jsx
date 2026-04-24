@@ -238,6 +238,7 @@ const ChatScreen = ({ onNavClick }) => {
             index={index}
             messages={messages}
             username={username}
+            currentUserId={user?._id?.toString() || ''}
             activeMessageId={activeMessageId}
             setActiveMessageId={setActiveMessageId}
             setReplyingTo={setReplyingTo}

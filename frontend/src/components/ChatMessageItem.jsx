@@ -25,11 +25,9 @@ const AttendanceFlex = ({ content }) => {
       <div className="mb-1.5">{cleanContent}</div>
       <div className="relative overflow-hidden rounded-xl border border-emerald-500/15 bg-gradient-to-br from-[#1a1830] to-[#0E0D14] p-2.5 mt-1">
         <div className="absolute -top-4 -right-4 w-14 h-14 bg-primary/10 rounded-full blur-xl pointer-events-none" />
-        <div className="relative z-10 flex items-center gap-2">
-          <div>
-            <span className="text-[9px] text-text3 uppercase tracking-wider font-medium block">Attendance Flex</span>
-            <span className="text-[10px] text-emerald-400 font-semibold">{displayStats}</span>
-          </div>
+        <div className="relative z-10">
+          <span className="text-[9px] text-text3 uppercase tracking-wider font-medium block">Attendance Flex</span>
+          <span className="text-[10px] text-emerald-400 font-semibold">{displayStats}</span>
         </div>
       </div>
     </div>
@@ -41,6 +39,7 @@ const ChatMessageItem = ({
   index,
   messages,
   username,
+  currentUserId,        // ← passed from ChatScreen as user._id.toString()
   activeMessageId,
   setActiveMessageId,
   setReplyingTo,
@@ -48,10 +47,11 @@ const ChatMessageItem = ({
   openConfirmModal,
   inputRef,
 }) => {
-  const { user } = useAuth();
+  const { user } = useAuth(); // only needed for role-based UI (admin/mod actions)
 
+  // Resolve sender ID as string — safe against ObjectId vs string mismatch
   const senderId = msg.sender?._id
-    ? msg.sender._id.toString()
+    ? String(msg.sender._id)
     : typeof msg.sender === 'string'
     ? msg.sender
     : null;
@@ -59,14 +59,17 @@ const ChatMessageItem = ({
   const senderName = msg.sender?.name;
   const senderRole = msg.sender?.role;
 
-  // Null-safe comparison — fixes all-messages-on-right bug
-  const isOwnMessage = !!(senderId && user?._id && senderId === user._id.toString());
+  // College name — stored directly on the message document (msg.college is populated)
+  const senderCollege = msg.college?.name;
+
+  // ✅ Reliable: compare explicit string prop passed from parent
+  const isOwnMessage = !!(currentUserId && senderId && currentUserId === senderId);
 
   const isSameSenderAsPrev = () => {
     if (index === 0) return false;
     const prev = messages[index - 1];
     const prevId = prev.sender?._id
-      ? prev.sender._id.toString()
+      ? String(prev.sender._id)
       : typeof prev.sender === 'string'
       ? prev.sender
       : null;
@@ -102,7 +105,7 @@ const ChatMessageItem = ({
           <div className={`flex items-center gap-1.5 mb-0.5 ${isOwnMessage ? 'flex-row-reverse' : ''}`}>
             <span
               className={`text-xs font-medium text-text2 ${user?.role === 'admin' ? 'hover:text-primary-mid cursor-pointer' : ''}`}
-              onClick={() => user?.role === 'admin' && senderId && (window._navClick?.(`profile/${senderId}`))}
+              onClick={() => user?.role === 'admin' && senderId && window._navClick?.(`profile/${senderId}`)}
             >
               {msg.senderName && msg.senderName !== 'Anonymous'
                 ? msg.senderName
@@ -110,13 +113,17 @@ const ChatMessageItem = ({
                 ? username || 'you'
                 : 'Anonymous'}
             </span>
-            {(senderRole === 'admin' || senderRole === 'moderator') && (
-              <span className={`text-[9px] px-1.5 py-0.5 rounded-md border border-opacity-30 uppercase font-bold tracking-wide
-                ${senderRole === 'admin' ? 'border-red-500 bg-red-500/10 text-red-400' : 'border-blue-500 bg-blue-500/10 text-blue-400'}`}>
-                {senderRole}
+
+            {/* College tag — replaces admin/moderator role badge */}
+            {senderCollege && (
+              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-primary/10 border border-primary/20 text-primary-mid font-medium truncate max-w-[80px]">
+                {senderCollege}
               </span>
             )}
-            <span className="text-xs text-text3">{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+
+            <span className="text-xs text-text3">
+              {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </span>
             <button
               onClick={() => setActiveMessageId(activeMessageId === msg._id ? null : msg._id)}
               className="text-text3 text-xs ml-1 px-1 hover:text-text transition-colors"
@@ -148,7 +155,7 @@ const ChatMessageItem = ({
 
         {/* Moderation dropdown */}
         {activeMessageId === msg._id && (
-          <div className={`absolute top-6 ${isOwnMessage ? 'right-0' : 'left-0'} z-50 bg-bg2 border border-border rounded-xl shadow-lg p-1 w-40 flex flex-col gap-1`}>
+          <div className={`absolute top-6 ${isOwnMessage ? 'right-0' : 'left-0'} z-50 bg-bg2 border border-border rounded-xl shadow-lg p-1 w-44 flex flex-col gap-1`}>
             <button
               onClick={() => {
                 setActiveMessageId(null);
@@ -168,7 +175,7 @@ const ChatMessageItem = ({
 
             {!isOwnMessage && (
               <button
-                onClick={() => { setActiveMessageId(null); openConfirm('report', msg._id, 'Report Message', 'Are you sure you want to report this message?', 'Report', 'bg-red-500', senderId); }}
+                onClick={() => { setActiveMessageId(null); openConfirm('report', msg._id, 'Report Message', 'Report this message?', 'Report', 'bg-red-500', senderId); }}
                 className="text-left px-3 py-2 text-xs font-medium text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
               >
                 Report Message
@@ -177,7 +184,7 @@ const ChatMessageItem = ({
 
             {(isOwnMessage || user?.role === 'admin' || user?.role === 'moderator') && (
               <button
-                onClick={() => { setActiveMessageId(null); openConfirm('delete', msg._id, 'Delete Message', 'Are you sure you want to delete this message?', 'Delete', 'bg-red-500', senderId); }}
+                onClick={() => { setActiveMessageId(null); openConfirm('delete', msg._id, 'Delete Message', 'Delete this message?', 'Delete', 'bg-red-500', senderId); }}
                 className="text-left px-3 py-2 text-xs font-medium text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
               >
                 Delete Message
@@ -186,7 +193,7 @@ const ChatMessageItem = ({
 
             {!isOwnMessage && senderId && (user?.role === 'admin' || user?.role === 'moderator') && (
               <button
-                onClick={() => { setActiveMessageId(null); openConfirm('suspend', msg._id, 'Suspend User', 'Suspend this user for 14 days?', 'Suspend', 'bg-accent-amber', senderId); }}
+                onClick={() => { setActiveMessageId(null); openConfirm('suspend', msg._id, 'Suspend User', 'Suspend for 14 days?', 'Suspend', 'bg-accent-amber', senderId); }}
                 className="text-left px-3 py-2 text-xs font-medium text-accent-amber hover:bg-accent-amber/10 rounded-lg transition-colors"
               >
                 Suspend (14 days)

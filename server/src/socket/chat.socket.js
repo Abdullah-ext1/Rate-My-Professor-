@@ -29,6 +29,7 @@ export function initChat(io) {
         });
         const populatedMessage = await message.populate([
           { path: "sender", select: "name avatar role username _id" },
+          { path: "college", select: "name" },
           { path: "replyTo", select: "senderName content" }
         ]);
         io.emit("message", populatedMessage);

@@ -6,7 +6,8 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 
 const getMessages = asyncHandler(async (req, res) => {
     const messages = await Message.find()
-        .populate("sender", "name avatar role username")
+        .populate("sender", "name avatar role username _id")
+        .populate("college", "name")
         .populate("replyTo", "senderName content")
         .sort({ createdAt: -1 })
         .limit(50);

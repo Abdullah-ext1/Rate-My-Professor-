@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useQueryClient } from '@tanstack/react-query';
 import api from "../context/api.js";
 import { timeAgo } from '../utils/timeAgo';
 import AttendanceFlexCard from './AttendanceFlexCard';
@@ -14,8 +15,13 @@ const getInitials = (name) => {
 
 const PostCard = ({ id, handle, handleId, isLiked = false, likes, comments, onClick, onDelete, onUserClick, title, content, time, category, }) => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [liked, setLiked] = useState(isLiked);
   const [likeCount, setLikeCount] = useState(likes);
+
+  // Sync local state when parent re-fetches updated data from cache
+  useEffect(() => { setLiked(isLiked); }, [isLiked]);
+  useEffect(() => { setLikeCount(likes); }, [likes]);
 
   const currentUserRole = user?.role; // Mocking role to allow admin/mod to delete
 
@@ -49,15 +55,20 @@ const PostCard = ({ id, handle, handleId, isLiked = false, likes, comments, onCl
 
   const toggleLike = async (e) => {
     e.stopPropagation();
+    // Optimistic update — feels instant
+    const newLiked = !liked;
+    setLiked(newLiked);
+    setLikeCount(prev => newLiked ? prev + 1 : prev - 1);
     try {
       await api.patch(`/posts/${id}/like`);
-      if (!liked) {
-        toast.success('Post liked successfully!', { id: 'like-post', duration: 2000 });
-      }
-      setLiked(!liked);
-      setLikeCount(liked ? likeCount - 1 : likeCount + 1);
+      if (newLiked) toast.success('Post liked!', { id: 'like-post', duration: 2000 });
+      // Sync React Query cache so other screens (PostScreen, feed) see correct state
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
     } catch (error) {
-      console.log("Error while liking the post", error)
+      // Revert on error
+      setLiked(!newLiked);
+      setLikeCount(prev => newLiked ? prev - 1 : prev + 1);
+      console.log('Error while liking the post', error);
     }
   };
 
