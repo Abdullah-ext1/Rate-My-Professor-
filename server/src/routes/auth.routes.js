@@ -26,7 +26,7 @@ router.get("/google/callback", passport.authenticate("google", {session: false})
       sameSite: "lax",
     });
 
-    res.redirect("https://campus-three-black.vercel.app");
+    res.redirect(`https://campus-three-black.vercel.app/?token=${token}`);
   },
 )
 
