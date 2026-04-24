@@ -122,14 +122,17 @@ const AppLayout = () => {
     refetchOnWindowFocus: true,
   });
 
+  // Register push once on login — NOT inside the poll effect
+  useEffect(() => {
+    if (!user) return;
+    registerPushNotifications();
+  }, [user]);
+
   useEffect(() => {
     if (!user) {
       previousUnreadRef.current = 0;
       return;
     }
-
-    // Register PWA push notifications
-    registerPushNotifications();
 
     if (previousUnreadRef.current === 0) {
       previousUnreadRef.current = unreadCount;

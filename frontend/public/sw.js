@@ -1,20 +1,31 @@
+// Immediately activate new SW — never stay in "waiting" state
+self.addEventListener('install', (event) => {
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(clients.claim());
+});
+
 self.addEventListener('push', function (event) {
   let data = {};
   if (event.data) {
     try {
       data = event.data.json();
     } catch (e) {
-      data = { body: event.data.text() };
+      data = { title: 'campus.', body: event.data.text() };
     }
   }
 
-  const title = data.title || 'RateProfessor';
+  const title = data.title || 'campus.';
   const options = {
     body: data.body || 'You have a new notification.',
-    icon: '/logo192.png', // Assuming there's a logo in public
+    icon: '/logo192.png',
     badge: '/logo192.png',
+    vibrate: [200, 100, 200],
+    requireInteraction: false,
     data: {
-      url: data.url || '/',
+      url: data.url || '/notifications',
     },
   };
 

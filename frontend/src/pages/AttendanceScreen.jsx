@@ -9,13 +9,13 @@ const ShareModal = ({ isOpen, onClose, onShare, subjects }) => {
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-end sm:items-center justify-center transition-opacity" onClick={onClose}>
-      <div 
+      <div
         className="bg-gradient-to-b from-[#1a1930] to-[#0E0D14] w-full max-w-sm rounded-t-3xl sm:rounded-3xl p-5 border border-primary/15 shadow-2xl animate-slide-up"
         onClick={e => e.stopPropagation()}
       >
         {/* Handle bar for mobile */}
         <div className="w-10 h-1 bg-border2 rounded-full mx-auto mb-5 sm:hidden" />
-        
+
         {/* Header */}
         <div className="flex items-center gap-2.5 mb-5">
           <div className="w-9 h-9 rounded-xl bg-accent-teal/15 border border-accent-teal/20 flex items-center justify-center">
@@ -51,7 +51,7 @@ const ShareModal = ({ isOpen, onClose, onShare, subjects }) => {
         </div>
 
         {/* Share button */}
-        <button 
+        <button
           onClick={onShare}
           className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-accent-teal to-[#15B886] text-white text-sm font-bold tracking-wide hover:shadow-lg hover:shadow-accent-teal/25 active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-2"
         >
@@ -151,9 +151,9 @@ const AttendanceScreen = ({ onNavClick }) => {
       const lastFlexStr = localStorage.getItem('lastFlexTime');
       if (lastFlexStr) {
         const lastFlexTime = new Date(lastFlexStr).getTime();
-        const twelveHours = 12 * 60 * 60 * 1000;
+        const twelveHours = 1 * 60 * 60 * 1000;
         if (Date.now() - lastFlexTime < twelveHours) {
-          showToast('⏳ You can only flex your stats once every 12 hours!');
+          showToast('⏳ You can only flex your stats once every 1 hour!');
           setShareModalOpen(false);
           return;
         }
@@ -162,9 +162,9 @@ const AttendanceScreen = ({ onNavClick }) => {
       const grade = getGrade(overall);
       const flexMessage = `My attendance stats: ${overall}% overall across ${subjects.length} subjects! ${grade.label}`;
       const senderName = localStorage.getItem('chatUsername') || "Anonymous";
-      
+
       await api.post('/messages', { content: flexMessage, senderName });
-      
+
       localStorage.setItem('lastFlexTime', new Date().toISOString());
       showToast('💬 Stats flexed to Global Chat!');
       setTimeout(() => onNavClick('chat'), 1000);
@@ -205,7 +205,7 @@ const AttendanceScreen = ({ onNavClick }) => {
         </div>
       </div>      {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto px-5 py-5 bg-bg pt-[76px] pb-24 scrollbar-hide">
-        
+
         {/* Hero ring card */}
         <div className="relative overflow-hidden rounded-3xl border border-primary/10 bg-gradient-to-br from-[#1c1a35] via-[#16151F] to-[#0f0e18] p-6 mb-6">
           {/* Decorative blobs */}
@@ -256,7 +256,7 @@ const AttendanceScreen = ({ onNavClick }) => {
             </div>
 
             {/* Grade badge */}
-            <div 
+            <div
               className="px-4 py-1.5 rounded-full border text-xs font-bold tracking-wide"
               style={{ borderColor: grade.color + '30', backgroundColor: grade.bg, color: grade.color }}
             >
@@ -317,7 +317,7 @@ const AttendanceScreen = ({ onNavClick }) => {
               <div className="w-16 h-16 rounded-2xl bg-bg2 border border-border flex items-center justify-center text-3xl mb-4">📚</div>
               <p className="text-text2 text-sm font-medium mb-1">No subjects yet</p>
               <p className="text-text3 text-xs mb-5">Start tracking your attendance to see stats here</p>
-              <button 
+              <button
                 onClick={() => onNavClick('professors', 'attendance')}
                 className="px-5 py-2.5 bg-primary/15 border border-primary/25 text-primary-mid text-sm rounded-xl font-medium hover:bg-primary/25 transition-colors cursor-pointer"
               >
@@ -329,15 +329,15 @@ const AttendanceScreen = ({ onNavClick }) => {
               const perc = Math.round(((sub.present || 0) / (sub.total || 1)) * 100);
               const barColor = getBarColor(perc);
               const canBunk = sub.total > 0 ? Math.floor(((sub.present || 0) - 0.75 * (sub.total || 1)) / 0.75) : 0;
-              
+
               return (
-                <div 
-                  key={sub._id || idx} 
+                <div
+                  key={sub._id || idx}
                   className="group bg-bg2 border border-border hover:border-primary/15 rounded-2xl p-4 transition-all duration-300 hover:shadow-lg hover:shadow-primary/5 relative overflow-hidden"
                   style={{ animationDelay: `${idx * 60}ms` }}
                 >
                   {/* Left accent bar */}
-                  <div 
+                  <div
                     className="absolute left-0 top-0 bottom-0 w-[3px] rounded-l-2xl transition-all duration-300"
                     style={{ backgroundColor: barColor }}
                   />
@@ -348,7 +348,7 @@ const AttendanceScreen = ({ onNavClick }) => {
                       <span className="text-[10px] text-text3 mt-0.5">{sub.present || 0} / {sub.total || 0} classes</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span 
+                      <span
                         className="text-xl font-extrabold font-syne"
                         style={{ color: barColor }}
                       >
@@ -359,10 +359,10 @@ const AttendanceScreen = ({ onNavClick }) => {
 
                   {/* Progress bar */}
                   <div className="h-[5px] bg-white/[0.04] rounded-full overflow-hidden mb-2.5 ml-2">
-                    <div 
+                    <div
                       className="h-full rounded-full transition-all duration-700 ease-out"
-                      style={{ 
-                        width: animateIn ? `${perc}%` : '0%', 
+                      style={{
+                        width: animateIn ? `${perc}%` : '0%',
                         backgroundColor: barColor,
                         boxShadow: `0 0 8px ${barColor}40`,
                         transitionDelay: `${idx * 100}ms`
@@ -372,9 +372,9 @@ const AttendanceScreen = ({ onNavClick }) => {
 
                   {/* Bunk info */}
                   <div className="flex justify-between items-center ml-2">
-                    <span 
+                    <span
                       className="text-[11px] font-medium px-2 py-0.5 rounded-md"
-                      style={{ 
+                      style={{
                         backgroundColor: canBunk > 0 ? 'rgba(29,158,117,0.1)' : 'rgba(226,75,74,0.1)',
                         color: canBunk > 0 ? '#1D9E75' : '#E24B4A'
                       }}
@@ -382,13 +382,13 @@ const AttendanceScreen = ({ onNavClick }) => {
                       {canBunk > 0 ? `Can bunk ${canBunk} more` : canBunk === 0 ? 'Cannot bunk' : `Attend ${Math.abs(canBunk)} more`}
                     </span>
                     <div className="flex gap-1">
-                      <button 
+                      <button
                         onClick={() => handleMarkAttendance(sub._id, 'attend')}
                         className="text-[10px] px-2.5 py-1 rounded-lg bg-accent-teal/10 border border-accent-teal/20 text-accent-teal font-medium hover:bg-accent-teal/20 active:scale-95 transition-all cursor-pointer"
                       >
                         ✓ Present
                       </button>
-                      <button 
+                      <button
                         onClick={() => handleMarkAttendance(sub._id, 'bunk')}
                         className="text-[10px] px-2.5 py-1 rounded-lg bg-bg3 border border-border text-text3 font-medium hover:bg-bg4 active:scale-95 transition-all cursor-pointer"
                       >
@@ -403,7 +403,7 @@ const AttendanceScreen = ({ onNavClick }) => {
         </div>
       </div>
 
-      <ShareModal 
+      <ShareModal
         isOpen={shareModalOpen}
         onClose={() => setShareModalOpen(false)}
         onShare={handleShare}

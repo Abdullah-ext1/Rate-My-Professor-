@@ -23,14 +23,18 @@ export function initChat(io) {
         const message = await Message.create({
           sender: socket.user._id,
           college: socket.user.college,
-          content: data.content, 
+          content: data.content,
           senderName: data.senderName || 'Anonymous',
-        })
-  const populatedMessage = await message.populate("sender", "name avatar role username _id")
-        io.emit("message", populatedMessage)
+          replyTo: data.replyTo || null,
+        });
+        const populatedMessage = await message.populate([
+          { path: "sender", select: "name avatar role username _id" },
+          { path: "replyTo", select: "senderName content" }
+        ]);
+        io.emit("message", populatedMessage);
       } catch (error) {
-        console.error("Error sending message:", error)
-        socket.emit("error", { message: "Failed to send message" })
+        console.error("Error sending message:", error);
+        socket.emit("error", { message: "Failed to send message" });
       }
     })
 
