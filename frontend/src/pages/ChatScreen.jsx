@@ -79,7 +79,7 @@ const ChatScreen = ({ onNavClick }) => {
   }, [isSuccess, hasEntered]);
 
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
+    const token = localStorage.getItem('token');
     if (!token) return;
 
     const socketUrl = import.meta.env.VITE_BACKEND_URL.replace('/api', '');

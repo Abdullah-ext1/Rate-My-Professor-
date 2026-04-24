@@ -5,6 +5,7 @@ import { timeAgo } from '../utils/timeAgo';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useInfiniteScrollTrigger } from '../utils/useInfiniteScrollTrigger';
 import { enableNotificationSound, isNotificationSoundEnabled, requestSystemNotificationPermission } from '../utils/notificationSound';
+import { registerPushNotifications } from '../utils/pushSubscription';
 import toast from 'react-hot-toast';
 
 const PAGE_SIZE = 10;
@@ -127,6 +128,7 @@ const NotificationScreen = ({ onNavClick }) => {
     if (enabled) {
       const notificationGranted = await requestSystemNotificationPermission();
       if (notificationGranted) {
+        await registerPushNotifications();
         toast.success('Alerts enabled (sound + system notifications)');
       } else {
         toast.success('Sound alerts enabled');

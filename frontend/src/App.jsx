@@ -151,7 +151,7 @@ const AppLayout = () => {
   }, [unreadCount, user]);
 
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
+    const token = localStorage.getItem('token');
     if (!user || !token || notificationSocketRef.current) return;
 
     const socketUrl = import.meta.env.VITE_BACKEND_URL.replace('/api', '');

@@ -62,8 +62,11 @@ const ChatMessageItem = ({
   // College name — stored directly on the message document (msg.college is populated)
   const senderCollege = msg.college?.name;
 
-  // ✅ Reliable: compare explicit string prop passed from parent
-  const isOwnMessage = !!(currentUserId && senderId && currentUserId === senderId);
+  // Prefer id match, but fall back to senderName when sender id is missing
+  const resolvedCurrentUserId = currentUserId || (user?._id ? String(user._id) : '');
+  const isOwnById = !!(resolvedCurrentUserId && senderId && resolvedCurrentUserId === senderId);
+  const isOwnByName = !!(!senderId && username && msg.senderName && username.toLowerCase() === msg.senderName.toLowerCase());
+  const isOwnMessage = isOwnById || isOwnByName;
 
   const isSameSenderAsPrev = () => {
     if (index === 0) return false;

@@ -40,7 +40,7 @@ export const registerPushNotifications = async () => {
       if (permission !== 'granted') return;
     }
 
-    // Reuse existing subscription if available — avoids redundant server calls
+    // Reuse existing subscription if available
     let subscription = await registration.pushManager.getSubscription();
 
     if (!subscription) {
@@ -53,10 +53,11 @@ export const registerPushNotifications = async () => {
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(publicVapidKey),
       });
-      // Only send to server when creating a new subscription
-      await api.post('/notifications/subscribe', subscription);
-      console.log('Push subscription registered successfully');
     }
+
+    // Always upsert on server in case it was cleared or user changed
+    await api.post('/notifications/subscribe', subscription);
+    console.log('Push subscription registered successfully');
 
     _pushRegistrationDone = true;
   } catch (error) {

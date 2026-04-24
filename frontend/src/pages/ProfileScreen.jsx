@@ -360,7 +360,7 @@ const ProfileScreen = ({ onNavClick, currentUserRole }) => {
           <button 
             onClick={async () => {
               await api.post('/auth/logout');
-              localStorage.removeItem('accessToken');
+              localStorage.removeItem('token');
               localStorage.removeItem('chatUsername');
               window.location.href = '/login';
             }}
