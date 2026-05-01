@@ -23,6 +23,7 @@ self.addEventListener('push', function (event) {
     icon: '/logo192.png',
     badge: '/logo192.png',
     vibrate: [200, 100, 200],
+    sound: '/notification.mp3',
     requireInteraction: false,
     data: {
       url: data.url || '/notifications',

@@ -107,24 +107,24 @@ export const playNotificationSound = async () => {
   }
 
   const now = ctx.currentTime;
-  const notes = [880, 660];
+  const notes = [523, 659, 784]; // C5, E5, G5 — a rising major chord
 
   notes.forEach((frequency, index) => {
     const oscillator = ctx.createOscillator();
     const gainNode = ctx.createGain();
 
-    oscillator.type = 'sine';
-    oscillator.frequency.setValueAtTime(frequency, now + index * 0.12);
+    oscillator.type = 'triangle'; // richer than sine
+    oscillator.frequency.setValueAtTime(frequency, now + index * 0.1);
 
-    gainNode.gain.setValueAtTime(0.0001, now + index * 0.12);
-    gainNode.gain.exponentialRampToValueAtTime(0.08, now + index * 0.12 + 0.02);
-    gainNode.gain.exponentialRampToValueAtTime(0.0001, now + index * 0.12 + 0.12);
+    gainNode.gain.setValueAtTime(0.0001, now + index * 0.1);
+    gainNode.gain.exponentialRampToValueAtTime(0.3, now + index * 0.1 + 0.02); // 0.08 → 0.3
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, now + index * 0.1 + 0.15);
 
     oscillator.connect(gainNode);
     gainNode.connect(ctx.destination);
 
-    oscillator.start(now + index * 0.12);
-    oscillator.stop(now + index * 0.12 + 0.12);
+    oscillator.start(now + index * 0.1);
+    oscillator.stop(now + index * 0.1 + 0.2);
   });
 };
 
