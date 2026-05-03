@@ -49,7 +49,6 @@ const RootRedirect = () => {
       return <Navigate to="/feed" />;
     }
     
-    
     if (!user.college && user.role !== 'admin') return <Navigate to="/onboarding" />;
     return <Navigate to="/feed" />;
 };
