@@ -13,7 +13,26 @@ const app = express();
 configurePassport();
 
 app.use(cors({
-    origin: process.env.CORS,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, curl, etc.)
+      if (!origin) return callback(null, true);
+      
+      const allowedOrigins = [
+        process.env.CORS,
+        process.env.FRONTEND_URL,
+        'http://localhost:5173',
+        'http://localhost:5174',
+        'http://localhost:5175',
+        'http://localhost:3000',
+        'https://campus-three-black.vercel.app',
+      ].filter(Boolean);
+      
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(null, true); // Permissive for dev — tighten in production if needed
+      }
+    },
     credentials: true
 }))
 

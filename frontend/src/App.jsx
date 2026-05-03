@@ -398,7 +398,7 @@ const AppLayout = () => {
         </Routes>
       </div>
 
-      {showPwaPrompt && (
+      {showPwaPrompt && currentScreen !== 'login' && currentScreen !== 'onboarding' && (
         <div className="fixed top-4 left-4 right-4 z-50 animate-slide-up">
           <div className="bg-bg2 border border-primary/30 rounded-2xl p-4 shadow-xl shadow-primary/10 flex items-center gap-4 relative">
             <button 

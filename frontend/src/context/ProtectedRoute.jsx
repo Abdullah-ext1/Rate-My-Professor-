@@ -1,9 +1,9 @@
 import { useAuth } from "./AuthContext.jsx";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 
 const PendingApprovalScreen = ({ userName }) => {
   const handleTryAgain = () => {
-    localStorage.removeItem('accessToken');
+    localStorage.removeItem('token');
     window.location.href = '/login';
   };
 
@@ -58,13 +58,19 @@ const LoadingScreen = () => (
 
 export const ProtectedRoute = ({children}) => {
   const { user, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) return <LoadingScreen />;
-  if (!user) return <Navigate to="/login" />;
+  if (!user) return <Navigate to="/login" replace />;
   
-  // Admins bypass status check
+  // Admins bypass all status/onboarding checks
   if (user.role === 'admin') return <>{children}</>;
-  
+
+  // New users who haven't completed onboarding yet → send them there
+  if (!user.college && location.pathname !== '/onboarding') {
+    return <Navigate to="/onboarding" replace />;
+  }
+
   // Non-admin users must have 'active' status
   if (user.status === 'pending') return <PendingApprovalScreen userName={user.name} />;
   if (user.status === 'rejected') return <RejectedScreen />;

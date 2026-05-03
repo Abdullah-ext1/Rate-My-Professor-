@@ -381,7 +381,7 @@ const ProfileScreen = ({ onNavClick, currentUserRole }) => {
 
           {(user?.role === 'admin' || user?.role === 'moderator') && (
             <button 
-              onClick={() => onNavClick('admin')}
+              onClick={() => onNavClick(user.role === 'admin' ? 'admin' : 'moderator-dashboard')}
               className="w-full flex items-center justify-between p-4 hover:bg-hover active:bg-divider transition-colors"
             >
               <div className="flex items-center gap-3 text-red-400">

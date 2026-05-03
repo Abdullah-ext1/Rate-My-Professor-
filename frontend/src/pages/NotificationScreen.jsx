@@ -1,8 +1,8 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { NotificationSkeleton } from '../components/Skeleton';
 import api from '../context/api.js';
 import { timeAgo } from '../utils/timeAgo';
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { useInfiniteScrollTrigger } from '../utils/useInfiniteScrollTrigger';
 import { enableNotificationSound, isNotificationSoundEnabled, requestSystemNotificationPermission } from '../utils/notificationSound';
 import { registerPushNotifications } from '../utils/pushSubscription';
@@ -106,6 +106,8 @@ const NotificationItem = ({ type, senderId, content, createdAt, isRead, postId, 
           {type === 'comment' && <><span className="font-bold">{senderId?.name || "Someone"}</span> commented on your post.</>}
           {type === 'announcement' && <><span className="font-bold">{senderId?.name || "Admin"}</span> posted an announcement.</>}
           {(type === 'pyqApproved' || type === 'pyqRejected') && <span>{content}</span>}
+          {type === 'approval' && <span className="text-green-400 font-medium">{content || 'Your account has been approved! Welcome to campus.'}</span>}
+          {type === 'rejection' && <span className="text-red-400 font-medium">{content || 'Your account application was not approved.'}</span>}
           {type === 'other' && <span>{content}</span>}
         </div>
         {type !== 'pyqApproved' && type !== 'pyqRejected' && type !== 'other' && (
@@ -120,6 +122,20 @@ const NotificationItem = ({ type, senderId, content, createdAt, isRead, postId, 
 const NotificationScreen = ({ onNavClick }) => {
   const loadMoreRef = useRef(null);
   const [alertsEnabled, setAlertsEnabled] = useState(isNotificationSoundEnabled());
+  const queryClient = useQueryClient();
+
+  // Auto-mark all as read when screen opens
+  useEffect(() => {
+    const markAllRead = async () => {
+      try {
+        await api.put('/notifications/mark-all-read');
+        queryClient.setQueryData(['notifications', 'unread'], 0);
+      } catch (e) {
+        // silently fail — not critical
+      }
+    };
+    markAllRead();
+  }, [queryClient]);
 
   const handleEnableAlerts = useCallback(async () => {
     const enabled = await enableNotificationSound();

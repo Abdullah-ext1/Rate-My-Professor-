@@ -25,8 +25,8 @@ export const AuthProvider = ({ children }) => {
     const token = params.get('token');
 
     if (token) {
-      // Save the token so sockets can use it later
-      localStorage.setItem('accessToken', token);
+      // Save the token so sockets and api interceptor can use it later
+      localStorage.setItem('token', token);
       window.history.replaceState({}, document.title, window.location.pathname);
       fetchUser();
     } else {
@@ -35,7 +35,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, refetchUser: fetchUser }}>
+    <AuthContext.Provider value={{ user, setUser, loading, refetchUser: fetchUser }}>
       {children}
     </AuthContext.Provider>
   );

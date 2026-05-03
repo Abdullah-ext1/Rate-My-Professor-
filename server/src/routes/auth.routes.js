@@ -20,13 +20,17 @@ router.get("/google/callback", passport.authenticate("google", {session: false})
       { expiresIn: "7d"},
     )
 
+    const isProduction = process.env.NODE_ENV === 'production';
+
     res.cookie("accessToken", token, {
       httpOnly: true,
-      secure: false,
-      sameSite: "lax",
+      secure: isProduction,
+      sameSite: isProduction ? "none" : "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
-    res.redirect(`https://campus-three-black.vercel.app/?token=${token}`);
+    const frontendUrl = process.env.FRONTEND_URL || 'https://campus-three-black.vercel.app';
+    res.redirect(`${frontendUrl}/?token=${token}`);
   },
 )
 
