@@ -43,6 +43,12 @@ const RootRedirect = () => {
     
     if (loading) return <LoadingScreen />;
     if (!user) return <Navigate to="/login" />;
+    
+    // If user status is pending or rejected, let ProtectedRoute handle it
+    if (user.status === 'pending' || user.status === 'rejected') {
+      return <Navigate to="/feed" />;
+    }
+    
     if (!user.college && user.role !== 'admin') return <Navigate to="/onboarding" />;
     return <Navigate to="/feed" />;
 };
