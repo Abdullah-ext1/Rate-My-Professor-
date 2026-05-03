@@ -1,20 +1,33 @@
 import { useAuth } from "./AuthContext.jsx";
 import { Navigate } from "react-router-dom";
 
-const PendingApprovalScreen = ({ userName }) => (
-  <div className="flex flex-col flex-1 overflow-hidden bg-bg relative min-h-screen items-center justify-center">
-    <div className="w-full max-w-sm text-center px-6">
-      <div className="text-6xl mb-4">⏳</div>
-      <h1 className="text-2xl font-bold text-text mb-3">Pending Approval</h1>
-      <p className="text-sm text-text3 mb-6">
-        Hi {userName}! Your account is pending moderator review. You'll get access to the community once approved.
-      </p>
-      <p className="text-xs text-text3 italic">
-        Please check back later or wait for a notification.
-      </p>
+const PendingApprovalScreen = ({ userName }) => {
+  const handleTryAgain = () => {
+    localStorage.removeItem('accessToken');
+    window.location.href = '/login';
+  };
+
+  return (
+    <div className="flex flex-col flex-1 overflow-hidden bg-bg relative min-h-screen items-center justify-center">
+      <div className="w-full max-w-sm text-center px-6">
+        <div className="text-6xl mb-4">⏳</div>
+        <h1 className="text-2xl font-bold text-text mb-3">Pending Approval</h1>
+        <p className="text-sm text-text3 mb-6">
+          Hi {userName}! Your account is pending moderator review. You'll get access to the community once approved.
+        </p>
+        <p className="text-xs text-text3 italic mb-8">
+          Please check back later or wait for a notification.
+        </p>
+        <button
+          onClick={handleTryAgain}
+          className="w-full px-6 py-3 bg-primary text-white rounded-lg font-semibold hover:bg-primary-dark transition-colors"
+        >
+          Try Again with College Email
+        </button>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const RejectedScreen = () => (
   <div className="flex flex-col flex-1 overflow-hidden bg-bg relative min-h-screen items-center justify-center">

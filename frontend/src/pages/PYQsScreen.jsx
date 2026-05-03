@@ -87,15 +87,15 @@ const HorizontalTabs = ({ tabs, activeTab, setActiveTab }) => (
 );
 
 const PYQCard = ({ subjectName, year, examType, isApproved, questionPaperUrl }) => (
-  <div onClick={() => questionPaperUrl && window.open(questionPaperUrl, '_blank')} className="bg-bg2 border border-border rounded-3xl p-3.5 mb-3 flex gap-3 cursor-pointer hover:border-border2 transition-colors relative overflow-hidden group">
+  <div onClick={() => questionPaperUrl && window.open(questionPaperUrl, '_blank')} className="bg-bg2 border border-border rounded-3xl p-3.5 mb-3 flex flex-col sm:flex-row gap-3 cursor-pointer hover:border-border2 transition-colors relative overflow-hidden group">
     <div className="w-10 h-10 rounded-2xl bg-opacity-15 bg-primary flex items-center justify-center text-primary-mid flex-shrink-0">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M14 2H6a2 2 0 0 0-2 2v16c0 1.1.9 2 2 2h12a2 2 0 0 0 2-2V8l-6-6z" />
         <path d="M14 3v5h5M16 13H8M16 17H8M10 9H8" />
       </svg>
     </div>
-    <div className="flex-1 flex flex-col justify-center">
-      <div className="text-sm font-semibold text-text font-syne flex items-center gap-2">
+    <div className="flex-1 flex flex-col justify-center pr-12 sm:pr-0">
+      <div className="text-sm font-semibold text-text font-syne flex items-center gap-2 flex-wrap">
         {subjectName}
         {!isApproved && (
           <span className="px-1.5 py-0.5 rounded-sm bg-accent-amber bg-opacity-20 text-[9px] text-accent-amber font-medium uppercase tracking-wider">
@@ -103,7 +103,7 @@ const PYQCard = ({ subjectName, year, examType, isApproved, questionPaperUrl }) 
           </span>
         )}
       </div>
-      <div className="flex items-center gap-2 mt-1">
+      <div className="flex items-center gap-2 mt-1 flex-wrap">
         <span className="text-xs text-text3">{year}</span>
         <span className="w-1 h-1 rounded-full bg-border2"></span>
         <span className="text-xs text-text3">{examType}</span>
@@ -116,7 +116,7 @@ const PYQCard = ({ subjectName, year, examType, isApproved, questionPaperUrl }) 
         if (questionPaperUrl) window.open(questionPaperUrl, '_blank');
       }}
       disabled={!questionPaperUrl}
-      className="absolute top-2 right-2 px-2.5 h-8 rounded-full bg-primary/20 text-primary-mid border border-primary/30 flex items-center gap-1.5 text-[11px] font-semibold hover:bg-primary hover:text-white transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+      className="sm:absolute sm:top-4 sm:right-3 px-2.5 h-8 rounded-full bg-primary/20 text-primary-mid border border-primary/30 flex items-center gap-1.5 text-[11px] font-semibold hover:bg-primary hover:text-white transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto justify-center sm:justify-start"
       title={questionPaperUrl ? 'Download' : 'Link unavailable'}
     >
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -165,11 +165,11 @@ const UploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
       })
 
       if (response.data) {
-        onUploadSuccess?.()
         setSubjectName('')
         setYear('')
         setFileUrl('')
         toast.success(`${type} submitted! Pending review.`, { id: 'submit-pyq', duration: 2500 });
+        onUploadSuccess?.()
         onClose()
       }
     } catch (err) {
@@ -221,12 +221,12 @@ const UploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
 
           <div className="flex gap-4">
             <div className="flex-1">
-              <label className="text-xs text-text3 font-medium mb-1 block">Year</label>
+              <label className="text-xs text-text3 font-medium mb-1 block">Semester</label>
               <input 
                 type="number" 
                 value={year}
                 onChange={e => setYear(e.target.value)}
-                placeholder="2024" 
+                placeholder="e.g. 1, 2, 3" 
                 className="w-full bg-bg2 border border-border rounded-xl px-3 py-2 text-sm text-text placeholder-text3 outline-none focus:border-primary-mid" 
               />
             </div>
@@ -292,8 +292,10 @@ const UploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
 const PYQsScreen = ({ onNavClick }) => {
   const [activeTab, setActiveTab] = useState('pyqs');
   const [activeFilter, setActiveFilter] = useState('All');
+  const [activeExamType, setActiveExamType] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: items = [], isLoading, isError, error } = useQuery({
@@ -306,7 +308,11 @@ const PYQsScreen = ({ onNavClick }) => {
     // this helps to avoid refetching data every time we come back to this screen within 5 minutes, providing a smoother UX
   });
 
-  // Filter based on active tab, filter type and search query
+  // Get unique semesters from items and create tabs
+  const uniqueSemesters = ['All', ...Array.from(new Set(items.map(item => String(item.year)).filter(Boolean))).sort((a, b) => parseInt(a) - parseInt(b))];
+  const semesterTabs = uniqueSemesters.map(sem => sem === 'All' ? 'All' : `Sem ${sem}`);
+
+  // Filter based on active tab, semester, exam type and search query
   const filteredItems = items.filter(item => {
     // 1. Filter by Segmented Control (pyqs -> PYQ, notes -> Notes)
     const isPyqTab = activeTab === 'pyqs';
@@ -318,9 +324,15 @@ const PYQsScreen = ({ onNavClick }) => {
       return false;
     }
 
-    // 3. Filter by horizontal tabs (if searching PYQs)
-    if (isPyqTab && activeFilter !== 'All') {
-      if (item.examType !== activeFilter) return false;
+    // 3. Filter by semester - extract semester number from tab label
+    if (activeFilter !== 'All') {
+      const semesterNumber = activeFilter.replace('Sem ', '');
+      if (String(item.year) !== semesterNumber) return false;
+    }
+
+    // 4. Filter by exam type (Internal1, Internal2) for PYQs only
+    if (isPyqTab && activeExamType !== 'All') {
+      if (item.examType !== activeExamType) return false;
     }
 
     return true;
@@ -331,16 +343,43 @@ const PYQsScreen = ({ onNavClick }) => {
       <TopNav onNavClick={onNavClick} />
       
       <div className="flex-1 overflow-y-auto px-4 pt-[60px] pb-6 scrollbar-hide bg-bg">
-        <SegmentedControl active={activeTab} setActive={setActiveTab} />
+        <SegmentedControl active={activeTab} setActive={(tab) => {
+          setActiveTab(tab);
+          setActiveFilter('All'); // Reset filters when switching tabs
+          setActiveExamType('All');
+        }} />
         
         <SearchBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
         
-        {activeTab === 'pyqs' && (
-          <HorizontalTabs 
-            tabs={['All', 'End Semester', 'Mid Semester', 'Internal1', 'Internal2', 'Other']} 
-            activeTab={activeFilter} 
-            setActiveTab={setActiveFilter} 
-          />
+        {/* Filter Toggle Button */}
+        <button
+          onClick={() => setShowFilters(!showFilters)}
+          className="mb-3 px-3 py-2 rounded-lg bg-bg2 border border-border hover:bg-border transition-colors flex items-center gap-2 text-text text-xs font-semibold"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+          </svg>
+          {showFilters ? 'Hide Filters' : 'Show Filters'}
+        </button>
+
+        {/* Semester Filter Tabs for both PYQs and Notes */}
+        {showFilters && (
+          <>
+            <HorizontalTabs 
+              tabs={semesterTabs} 
+              activeTab={activeFilter} 
+              setActiveTab={setActiveFilter} 
+            />
+
+            {/* Exam Type Filter Tabs for PYQs only */}
+            {activeTab === 'pyqs' && (
+              <HorizontalTabs 
+                tabs={['All', 'Internal1', 'Internal2']} 
+                activeTab={activeExamType} 
+                setActiveTab={setActiveExamType} 
+              />
+            )}
+          </>
         )}
 
         <div className="mt-2">

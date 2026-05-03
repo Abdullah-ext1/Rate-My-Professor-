@@ -107,18 +107,21 @@ const EditProfileModal = ({ isOpen, onClose, user, onUpdate }) => {
             </div>
 
             <div className="flex flex-col gap-1">
-              <label className="text-xs text-text3 font-bold uppercase tracking-wider ml-1">Year</label>
+              <label className="text-xs text-text3 font-bold uppercase tracking-wider ml-1">Semester</label>
               <select 
                 value={year} 
                 onChange={(e) => setYear(e.target.value)} 
                 className="bg-bg2 border border-border rounded-2xl px-4 py-3 text-sm text-text outline-none focus:border-primary-mid transition-colors appearance-none"
               >
-                <option value="">Select Year</option>
-                <option value="1">1st Year</option>
-                <option value="2">2nd Year</option>
-                <option value="3">3rd Year</option>
-                <option value="4">4th Year</option>
-                <option value="5">5th Year+</option>
+                <option value="">Select Semester</option>
+                <option value="1">Sem 1</option>
+                <option value="2">Sem 2</option>
+                <option value="3">Sem 3</option>
+                <option value="4">Sem 4</option>
+                <option value="5">Sem 5</option>
+                <option value="6">Sem 6</option>
+                <option value="7">Sem 7</option>
+                <option value="8">Sem 8</option>
               </select>
             </div>
 
@@ -147,6 +150,12 @@ const ProfileScreen = ({ onNavClick, currentUserRole }) => {
   const {user, setUser} = useAuth();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    // Check localStorage first, then check system preference
+    const saved = localStorage.getItem('theme-mode');
+    if (saved) return saved === 'dark';
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  });
   
   // Try to use the globally captured deferred prompt first
   const [deferredPrompt, setDeferredPrompt] = useState(window._deferredPrompt || null);
@@ -173,6 +182,23 @@ const ProfileScreen = ({ onNavClick, currentUserRole }) => {
       window.removeEventListener('appinstalled', handleAppInstalled);
     };
   }, []);
+
+  // Apply theme on mount and when isDarkMode changes
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+      document.documentElement.style.colorScheme = 'dark';
+    } else {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.style.colorScheme = 'light';
+    }
+  }, [isDarkMode]);
+
+  const handleThemeToggle = () => {
+    const newDarkMode = !isDarkMode;
+    setIsDarkMode(newDarkMode);
+    localStorage.setItem('theme-mode', newDarkMode ? 'dark' : 'light');
+  };
 
   const handleInstallClick = async () => {
     const isStandalone =
@@ -235,6 +261,7 @@ const ProfileScreen = ({ onNavClick, currentUserRole }) => {
           user={user}
           onUpdate={(updatedData) => {
             setUser({ ...user, ...updatedData });
+            setTimeout(() => window.location.reload(), 500);
           }}
         />
 
@@ -307,6 +334,33 @@ const ProfileScreen = ({ onNavClick, currentUserRole }) => {
               <span className="text-sm font-semibold block text-primary font-syne">Install RateProfessor App</span>
               <span className="text-xs text-text3">Get the native app experience</span>
             </div>
+          </button>
+
+          <button 
+            onClick={handleThemeToggle}
+            className="flex items-center gap-3 p-4 rounded-2xl hover:bg-bg2 transition-colors text-text group cursor-pointer w-full text-left mb-2"
+          >
+            <div className="w-8 h-8 rounded-full bg-bg3 flex items-center justify-center text-text3 group-hover:text-primary-mid group-hover:bg-primary-mid/10 transition-colors">
+              {isDarkMode ? (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="5" />
+                  <line x1="12" y1="1" x2="12" y2="3" />
+                  <line x1="12" y1="21" x2="12" y2="23" />
+                  <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                  <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                  <line x1="1" y1="12" x2="3" y2="12" />
+                  <line x1="21" y1="12" x2="23" y2="12" />
+                  <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                  <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+                </svg>
+              ) : (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                </svg>
+              )}
+            </div>
+            <span className="text-sm font-semibold flex-1">Theme</span>
+            <span className="text-xs text-text3">{isDarkMode ? 'Dark' : 'Light'}</span>
           </button>
 
           <button 
