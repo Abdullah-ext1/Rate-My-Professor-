@@ -184,21 +184,21 @@ const ProfileScreen = ({ onNavClick, currentUserRole }) => {
   }, []);
 
   // Apply theme on mount and when isDarkMode changes
-  useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-      document.documentElement.style.colorScheme = 'dark';
-    } else {
-      document.documentElement.classList.remove('dark');
-      document.documentElement.style.colorScheme = 'light';
-    }
-  }, [isDarkMode]);
+  // useEffect(() => {
+  //   if (isDarkMode) {
+  //     document.documentElement.classList.add('dark');
+  //     document.documentElement.style.colorScheme = 'dark';
+  //   } else {
+  //     document.documentElement.classList.remove('dark');
+  //     document.documentElement.style.colorScheme = 'light';
+  //   }
+  // }, [isDarkMode]);
 
-  const handleThemeToggle = () => {
-    const newDarkMode = !isDarkMode;
-    setIsDarkMode(newDarkMode);
-    localStorage.setItem('theme-mode', newDarkMode ? 'dark' : 'light');
-  };
+  // const handleThemeToggle = () => {
+  //   const newDarkMode = !isDarkMode;
+  //   setIsDarkMode(newDarkMode);
+  //   localStorage.setItem('theme-mode', newDarkMode ? 'dark' : 'light');
+  // };
 
   const handleInstallClick = async () => {
     const isStandalone =
@@ -336,7 +336,7 @@ const ProfileScreen = ({ onNavClick, currentUserRole }) => {
             </div>
           </button>
 
-          <button 
+          {/* <button 
             onClick={handleThemeToggle}
             className="flex items-center gap-3 p-4 rounded-2xl hover:bg-bg2 transition-colors text-text group cursor-pointer w-full text-left mb-2"
           >
@@ -361,7 +361,7 @@ const ProfileScreen = ({ onNavClick, currentUserRole }) => {
             </div>
             <span className="text-sm font-semibold flex-1">Theme</span>
             <span className="text-xs text-text3">{isDarkMode ? 'Dark' : 'Light'}</span>
-          </button>
+          </button> */}
 
           <button 
             onClick={() => setIsEditModalOpen(true)}
