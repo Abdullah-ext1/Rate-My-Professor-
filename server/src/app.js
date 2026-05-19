@@ -55,6 +55,7 @@ import announcementRoutes from "./routes/announcement.routes.js";
 import pyqsRoutes from "./routes/pyqs.routes.js"
 import messageRoutes from "./routes/message.routes.js"
 import healthRoutes from "./routes/health.routes.js"
+import quizRoutes from "./routes/quiz.routes.js"
 
 //routes use
 app.use("/api/auth", authroutes)
@@ -68,6 +69,7 @@ app.use("/api/notifications", notificationRoutes)
 app.use("/api/leaderboard", leaderboardRoutes)
 app.use("/api/announcements", announcementRoutes)
 app.use("/api/pyqs", pyqsRoutes)
+app.use("/api/quiz", quizRoutes)
 app.use("/api/messages", messageRoutes)     
 app.use("/health", healthRoutes)
 

@@ -111,6 +111,34 @@ const changeAccountDetails = asyncHandler(async (req, res) => {
 });
 
 const getCurrentUser = asyncHandler(async (req, res) => {
+  // Update login streak
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const userDoc = await User.findById(req.user.id);
+
+  if (userDoc) {
+    const lastLogin = userDoc.lastLoginDate ? new Date(userDoc.lastLoginDate) : null;
+    const lastLoginDay = lastLogin ? new Date(lastLogin.getFullYear(), lastLogin.getMonth(), lastLogin.getDate()) : null;
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    if (!lastLoginDay || lastLoginDay.getTime() < yesterday.getTime()) {
+      // Missed a day (or first login) — reset streak to 1
+      userDoc.currentStreak = 1;
+    } else if (lastLoginDay.getTime() === yesterday.getTime()) {
+      // Logged in yesterday — increment streak
+      userDoc.currentStreak = (userDoc.currentStreak || 0) + 1;
+    }
+    // If lastLoginDay === today, streak stays the same (already counted)
+
+    if (userDoc.currentStreak > (userDoc.longestStreak || 0)) {
+      userDoc.longestStreak = userDoc.currentStreak;
+    }
+
+    userDoc.lastLoginDate = now;
+    await userDoc.save();
+  }
+
   const user = await User.findById(req.user.id).populate('college', 'name').lean();
   
   if (user) {

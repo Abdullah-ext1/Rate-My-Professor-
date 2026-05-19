@@ -5,7 +5,7 @@ import {asyncHandler} from '../utils/asyncHandler.js';
 import { createNotification } from './notification.controller.js';
 
 const uploadPYQ = asyncHandler(async (req, res) => {
-  const {subjectName, year, questionPaperUrl, examType} = req.body
+  const {subjectName, year, questionPaperUrl, examType, notesContent} = req.body
 
   if(!subjectName || !year || !questionPaperUrl || !examType) {
     throw new ApiError(400, "All fields are required")
@@ -17,7 +17,8 @@ const uploadPYQ = asyncHandler(async (req, res) => {
     questionPaperUrl,
     examType,
     college: req.user.college,
-    owner: req.user._id
+    owner: req.user._id,
+    notesContent: notesContent || ''
   })
 
   return res
@@ -72,9 +73,8 @@ const moderatePYQ = asyncHandler(async (req, res) => {
 const getPYQs = asyncHandler(async (req, res) => {
   const {subjectName, year, examType} = req.query
 
-  const filter = (req.user.role === 'admin' || req.user.role === 'moderator') 
-    ? {} 
-    : { college: req.user.college };
+  // Global vault — no college filtering
+  const filter = {};
 
   if (req.user.role !== 'admin' && req.user.role !== 'moderator') {
     // Normal user sees approved ones OR their own uploads
@@ -86,7 +86,6 @@ const getPYQs = asyncHandler(async (req, res) => {
   if(req.query.isApproved !== undefined && (req.user.role === 'admin' || req.user.role === 'moderator')) {
     filter.isApproved = req.query.isApproved === 'true'
   }
-
 
   if(subjectName) {
     filter.subjectName = subjectName

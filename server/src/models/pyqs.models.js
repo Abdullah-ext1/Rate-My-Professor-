@@ -28,6 +28,10 @@ const pyqsSchema = new Schema({
     ref: 'User',
     required: true
   },
+  notesContent: {
+    type: String,
+    default: ''
+  },
   isApproved: {
     type: Boolean,
     default: false

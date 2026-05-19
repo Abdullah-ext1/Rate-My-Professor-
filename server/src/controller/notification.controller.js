@@ -66,6 +66,19 @@ const markAsRead = asyncHandler(async (req, res) => {
   )
 })
 
+const markAllAsRead = asyncHandler(async (req, res) => {
+  await Notification.updateMany(
+    { userId: req.user._id, isRead: false },
+    { $set: { isRead: true } }
+  )
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, null, "All notifications marked as read")
+    )
+})
+
 const getAllNotifications = asyncHandler(async (req, res) => {
   const isPaginatedRequest = req.query.page !== undefined || req.query.limit !== undefined
   const page = Math.max(Number(req.query.page) || 1, 1)
@@ -184,6 +197,7 @@ const sendPushNotification = async (payload, options = {}) => {
 export {
   createNotification,
   markAsRead,
+  markAllAsRead,
   getAllNotifications,
   getUnreadCount,
   subscribePush,

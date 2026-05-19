@@ -4,6 +4,7 @@ import api from '../context/api';
 import { useAuth } from '../context/AuthContext';
 import { timeAgo } from '../utils/timeAgo';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import toast from 'react-hot-toast';
 
 const AdminScreen = ({ onNavClick, onBack }) => {
   const { user } = useAuth();
@@ -11,7 +12,7 @@ const AdminScreen = ({ onNavClick, onBack }) => {
   const isModerator = user?.role === 'moderator' || isAdmin;
   const queryClient = useQueryClient();
 
-  const [activeTab, setActiveTab] = useState('pending'); // 'pending' | 'moderators' | 'professors'
+  const [activeTab, setActiveTab] = useState('pending'); // 'pending' | 'moderators' | 'professors' | 'quizzes'
 
   const { data: pendingUsers = [], isLoading: loadingUsers, isError: isUsersError, error: usersError } = useQuery({
     queryKey: ['pendingUsers'],
@@ -43,7 +44,34 @@ const AdminScreen = ({ onNavClick, onBack }) => {
   const loading = loadingUsers || loadingProfs;
 
   const [selectedMod, setSelectedMod] = useState(null);
-  const [confirmAction, setConfirmAction] = useState({ isOpen: false, modId: null });
+  const [confirmAction, setConfirmAction] = useState({ isOpen: false, modId: null, type: 'mod' });
+
+  // Quizzes for admin/mod management
+  const { data: quizzes = [], isLoading: loadingQuizzes } = useQuery({
+    queryKey: ['adminQuizzes'],
+    queryFn: async () => {
+      const res = await api.get('/quiz/all');
+      return res.data.data;
+    },
+    enabled: activeTab === 'quizzes'
+  });
+
+  const deleteQuizMutation = useMutation({
+    mutationFn: async (quizId) => {
+      await api.delete(`/quiz/${quizId}`);
+      return quizId;
+    },
+    onSuccess: (quizId) => {
+      queryClient.setQueryData(['adminQuizzes'], (old) => old?.filter(q => q._id !== quizId) || []);
+      queryClient.invalidateQueries({ queryKey: ['quizzes'] });
+      toast.success('Quiz deleted');
+      setConfirmAction({ isOpen: false, modId: null, type: 'mod' });
+    },
+    onError: (err) => {
+      toast.error(err?.response?.data?.message || 'Failed to delete quiz');
+      setConfirmAction({ isOpen: false, modId: null, type: 'mod' });
+    }
+  });
 
   const handleRemoveMod = async () => {
     try {
@@ -147,6 +175,12 @@ const AdminScreen = ({ onNavClick, onBack }) => {
               </button>
             </>
           )}
+          <button 
+            className={`flex-1 py-3 px-4 min-w-[max-content] text-sm font-medium ${activeTab === 'quizzes' ? 'text-primary border-b-2 border-primary' : 'text-text3'}`}
+            onClick={() => setActiveTab('quizzes')}
+          >
+            Quizzes
+          </button>
         </div>
       )}
 
@@ -310,16 +344,63 @@ const AdminScreen = ({ onNavClick, onBack }) => {
               ))
             )}
           </div>
+        ) : activeTab === 'quizzes' ? (
+          // Quizzes Management View
+          <div className="mt-4 flex flex-col gap-3 pb-8">
+            {loadingQuizzes ? (
+              <div className="text-center py-10">
+                <p className="text-text3 text-sm animate-pulse">Loading quizzes...</p>
+              </div>
+            ) : quizzes.length === 0 ? (
+              <div className="text-center py-10 border border-dashed border-border rounded-xl">
+                <p className="text-text3 text-sm mb-2">No quizzes found.</p>
+                <p className="text-xs text-text3/70">Quizzes will appear here once generated.</p>
+              </div>
+            ) : (
+              quizzes.map((quiz) => (
+                <div key={quiz._id} className="bg-bg2 border border-border rounded-xl p-4 flex flex-col gap-3">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600/20 to-indigo-600/20 flex items-center justify-center text-violet-400 flex-shrink-0">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-sm font-bold text-text">{quiz.subjectName}</h3>
+                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                        <span className="text-xs text-text3">Sem {quiz.semester}</span>
+                        <span className="w-1 h-1 rounded-full bg-border2"></span>
+                        <span className="text-xs text-text3">{quiz.questions?.length || 10} questions</span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[10px] text-text3">by {quiz.generatedBy?.name || 'Anonymous'}</span>
+                        <span className="w-1 h-1 rounded-full bg-border2"></span>
+                        <span className="text-[10px] text-text3">{timeAgo(quiz.createdAt)}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 mt-1 pt-3 border-t border-border">
+                    <button
+                      onClick={() => setConfirmAction({ isOpen: true, modId: quiz._id, type: 'quiz' })}
+                      className="flex-1 py-2 rounded-lg border border-red-500/30 text-red-400 text-xs font-bold hover:bg-red-500/10 transition-colors"
+                    >
+                      Delete Quiz
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         ) : null}
       </div>
 
       <ConfirmModal 
         isOpen={confirmAction.isOpen}
-        onClose={() => setConfirmAction({ isOpen: false, modId: null })}
-        onConfirm={handleRemoveMod}
-        title="Revoke Moderator Role"
-        message="Are you sure you want to remove this user's moderator privileges? They will be downgraded to a standard user."
-        confirmText="Revoke Access"
+        onClose={() => setConfirmAction({ isOpen: false, modId: null, type: 'mod' })}
+        onConfirm={confirmAction.type === 'quiz' ? () => deleteQuizMutation.mutate(confirmAction.modId) : handleRemoveMod}
+        title={confirmAction.type === 'quiz' ? 'Delete Quiz' : 'Revoke Moderator Role'}
+        message={confirmAction.type === 'quiz' ? 'Are you sure you want to permanently delete this quiz? This action cannot be undone.' : "Are you sure you want to remove this user's moderator privileges? They will be downgraded to a standard user."}
+        confirmText={confirmAction.type === 'quiz' ? 'Delete' : 'Revoke Access'}
         confirmColor="bg-red-500"
       />
     </div>

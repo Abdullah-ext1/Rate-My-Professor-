@@ -27,6 +27,7 @@ const OnBoardingScreen = lazy(() => import('./pages/OnBoardingScreen'));
 const PrivacyPolicyScreen = lazy(() => import('./pages/PrivacyPolicyScreen'));
 const ModeratorDashboard = lazy(() => import('./pages/ModeratorDashboard'));
 const AttendanceScreen = lazy(() => import('./pages/AttendanceScreen'));
+const QuizScreen = lazy(() => import('./pages/QuizScreen'));
 
 
 
@@ -225,7 +226,7 @@ const AppLayout = () => {
   return (
     <div className="w-full h-screen bg-bg overflow-hidden flex flex-col">
       {/* Scrollable Content - bottom padding for footer */}
-      <div className="flex-1 overflow-y-auto mb-16 w-full">
+      <div className={`flex-1 overflow-y-auto w-full ${location.pathname.startsWith('/quiz/') ? '' : 'mb-16'}`}>
         <Routes>
           <Route path="/login" element={
             <div className="animate-fade-in">
@@ -258,6 +259,16 @@ const AppLayout = () => {
               <Suspense fallback={<SuspenseLoader />}>
                 <div className="animate-fade-in">
                   <AnnouncementScreen onNavClick={handleNavClick} />
+                </div>
+              </Suspense>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/quiz/:quizId" element={
+            <ProtectedRoute>
+              <Suspense fallback={<SuspenseLoader />}>
+                <div className="animate-fade-in">
+                  <QuizScreen />
                 </div>
               </Suspense>
             </ProtectedRoute>
@@ -432,7 +443,7 @@ const AppLayout = () => {
       )}
 
       {/* Fixed Footer - Only shown when not on login screen */}
-      {currentScreen !== 'login' && currentScreen !== 'onboarding' && (
+      {currentScreen !== 'login' && currentScreen !== 'onboarding' && !location.pathname.startsWith('/quiz/') && (
         <div className="fixed bottom-0 left-0 right-0 z-40 bg-bg border-t border-border animate-slide-up">
           <div className="flex justify-around items-center h-16 px-2">
             {['feed', 'professors', 'announcement', 'vault', 'chat'].map(screen => (
